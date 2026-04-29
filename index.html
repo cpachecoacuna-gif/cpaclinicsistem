@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CPAclinicsistem — Sistema de Filas</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F5F5F7;--card:#FFFFFF;--border:#E5E5EA;--text:#1D1D1F;--muted:#86868B;
+  --accent:#1D1D1F;--radius:14px;--shadow:0 2px 8px rgba(0,0,0,.06),0 0 0 0.5px rgba(0,0,0,.04);
+  --shadow-hover:0 8px 24px rgba(0,0,0,.10),0 0 0 0.5px rgba(0,0,0,.06);
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Arial,sans-serif;
+  --mono:'SF Mono','Consolas','Courier New',monospace;
+  --transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+  --spring:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;min-height:100vh}
+
+/* ── GLOBAL TRANSITIONS ── */
+button{transition:var(--transition)}
+input,select,textarea{transition:var(--transition)}
+
+/* ── SCREEN TRANSITIONS ── */
+.screen{display:none;animation:fadeIn 0.25s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── CARD ANIMATIONS ── */
+.queue-section{animation:slideUp 0.3s ease both}
+.att-card{animation:slideUp 0.25s ease both}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── PATIENT ROW ENTER ── */
+.p-row{transition:background 0.2s ease,border-color 0.2s ease}
+.p-row:hover{background:#F9F9FB}
+
+/* ── TAKE BTN SPRING ── */
+.take-btn{transition:var(--spring)}
+.take-btn:hover{transform:scale(1.05)}
+.take-btn:active{transform:scale(0.96)}
+
+/* ── MODAL ANIMATION ── */
+.modal{transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease}
+.modal-bg.open .modal{transform:translateY(0) scale(1)}
+.modal-bg .modal{transform:translateY(20px) scale(0.97)}
+
+/* ── CONFETTI ── */
+#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none}
+
+/* ── ALTA CELEBRATION ── */
+@keyframes celebPop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.alta-celebration{animation:celebPop 0.5s cubic-bezier(0.34,1.56,0.64,1)}
+
+/* ── LIVE PILL PULSE ── */
+.live-pill{animation:pillBreath 3s ease-in-out infinite}
+@keyframes pillBreath{0%,100%{box-shadow:0 0 0 0 rgba(5,150,105,0.3)}50%{box-shadow:0 0 0 6px rgba(5,150,105,0)}}
+
+/* ── BUTTONS REFINED ── */
+.add-btn{transition:var(--spring)}
+.add-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.add-btn:active{transform:translateY(0) scale(0.98)}
+
+.connect-btn{transition:var(--spring)}
+.connect-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.connect-btn:active{transform:scale(0.98)}
+
+.user-btn{transition:var(--transition)}
+.user-btn:hover{transform:translateX(3px);border-color:var(--accent);box-shadow:var(--shadow-hover)}
+.user-btn:active{transform:scale(0.99)}
+
+.tab-btn{transition:var(--transition)}
+.tab-btn:hover{background:#fff;box-shadow:var(--shadow)}
+.tab-btn.on:hover{background:var(--accent)}
+
+.derivar-btn{transition:var(--spring)}
+.derivar-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-hover);border-color:var(--accent)}
+.derivar-btn:active{transform:scale(0.98)}
+
+.achs-btn{transition:var(--spring)}
+.achs-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(30,64,175,0.3)}
+.achs-btn:active{transform:scale(0.98)}
+
+.export-btn{transition:var(--spring)}
+.export-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(5,150,105,0.3)}
+.export-btn:active{transform:scale(0.98)}
+
+.monitor-btn{transition:var(--spring)}
+.monitor-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.monitor-btn:active{transform:scale(0.98)}
+
+/* ── INPUTS REFINED ── */
+.add-grid input:focus,.add-grid select:focus,.add-grid textarea:focus{
+  box-shadow:0 0 0 3px rgba(29,29,31,0.08);transform:translateY(-1px)
+}
+.field-inp:focus{box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+
+/* ── QUEUE HEADER HOVER ── */
+.q-head{transition:var(--transition);cursor:default}
+
+/* ── BADGE HOVER ── */
+.qh-badge{transition:var(--spring)}
+.queue-section:hover .qh-badge{transform:scale(1.15)}
+
+/* ── PROGRESS BAR SMOOTH ── */
+.att-progress-fill{transition:width 1s cubic-bezier(0.4,0,0.2,1),background 0.5s ease}
+
+/* ── CHECKLIST ITEM ── */
+.chk-item{transition:var(--transition)}
+.chk-item:hover{transform:translateX(3px)}
+
+/* ── GALLO EASTER EGG ── */
+#gallo-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;cursor:pointer}
+#gallo-overlay.show{display:flex;animation:fadeIn .3s ease}
+#gallo-overlay .gallo-text{color:#fff;font-size:18px;font-weight:700;text-align:center;animation:galloWiggle .5s ease infinite alternate}
+@keyframes galloWiggle{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+#gallo-svg{animation:galloJump .6s cubic-bezier(0.34,1.56,0.64,1) infinite alternate}
+@keyframes galloJump{from{transform:translateY(0) scaleX(1)}to{transform:translateY(-14px) scaleX(-1)}}
+
+/* ── POLLITO LOADING ── */
+#pollito-loading{position:fixed;inset:0;background:#FFFBEB;z-index:9997;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#pollito-loading.show{display:flex}
+.pollito-wrap{position:relative;width:120px;height:120px}
+.cascaron-bottom{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:70px;height:40px;background:#FEF3C7;border:3px solid #D97706;border-radius:0 0 40px 40px;animation:cascaronShake .4s ease infinite alternate}
+.cascaron-top{position:absolute;bottom:28px;left:50%;transform:translateX(-50%) rotate(-15deg);width:62px;height:36px;background:#FEF9C3;border:3px solid #D97706;border-radius:40px 40px 0 0;transform-origin:bottom right;animation:cascaronOpen .8s ease infinite alternate}
+@keyframes cascaronShake{from{transform:translateX(-50%) rotate(-4deg)}to{transform:translateX(-50%) rotate(4deg)}}
+@keyframes cascaronOpen{from{transform:translateX(-50%) rotate(-15deg)}to{transform:translateX(-50%) rotate(15deg)}}
+.pollito-cara{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);font-size:36px;animation:pollitoAsoma .8s ease infinite alternate}
+@keyframes pollitoAsoma{from{transform:translateX(-50%) translateY(8px);opacity:.3}to{transform:translateX(-50%) translateY(-4px);opacity:1}}
+.pollito-texto{font-size:14px;font-weight:700;color:#B45309;text-align:center;animation:pollitoTexto 1s ease infinite alternate}
+@keyframes pollitoTexto{from{opacity:.5}to{opacity:1}}
+
+/* ── STAGGER ANIMATION FOR QUEUES ── */
+.queue-section:nth-child(1){animation-delay:0ms}
+.queue-section:nth-child(2){animation-delay:60ms}
+.queue-section:nth-child(3){animation-delay:120ms}
+.queue-section:nth-child(4){animation-delay:180ms}
+.queue-section:nth-child(5){animation-delay:240ms}
+
+/* ── ATT CARD STAGGER ── */
+.att-card:nth-child(1){animation-delay:0ms}
+.att-card:nth-child(2){animation-delay:80ms}
+.att-card:nth-child(3){animation-delay:160ms}
+.setup-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:2rem;width:100%;max-width:480px;box-shadow:var(--shadow)}
+.setup-card h1{font-size:22px;font-weight:700;margin-bottom:.5rem}
+.setup-card .sub{font-size:13px;color:var(--muted);margin-bottom:1.5rem;line-height:1.6}
+.step-box{background:#F0F9FF;border:1px solid #BAE6FD;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.step-num{font-size:11px;font-weight:800;color:#0369A1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.step-txt{font-size:13px;color:#0C4A6E;line-height:1.6}
+.step-txt a{color:#0369A1;font-weight:700}
+.step-txt code{background:#E0F2FE;padding:1px 6px;border-radius:4px;font-size:12px;font-family:var(--mono)}
+.field-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 5px}
+.field-inp{width:100%;padding:10px 12px;font-size:13px;font-family:var(--mono);border:1.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);transition:border-color .15s}
+.field-inp:focus{outline:none;border-color:#2563EB}
+.connect-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:700;margin-top:14px;font-family:var(--font);transition:opacity .15s}
+.connect-btn:hover{opacity:.88}
+.connect-btn:disabled{opacity:.4;cursor:not-allowed}
+.err-box{font-size:12px;color:#DC2626;margin-top:8px;padding:8px 12px;background:#FEF2F2;border-radius:8px;border:1px solid #FECACA;display:none}
+.demo-link{display:block;text-align:center;margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;width:100%}
+
+/* ── LOGIN ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.75rem;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem}
+.brand-icon{width:42px;height:42px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.brand h2{font-size:18px;font-weight:800}
+.brand p{font-size:12px;color:var(--muted)}
+.sync-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;margin-bottom:1rem;padding:6px 10px;border-radius:8px;border:1px solid}
+.sync-badge.live{color:#059669;background:#ECFDF5;border-color:#A7F3D0}
+.sync-badge.demo{color:#B45309;background:#FFFBEB;border-color:#FDE68A}
+.dot{width:7px;height:7px;border-radius:50%;animation:pulse 2s infinite}
+.dot.green{background:#059669}
+.dot.amber{background:#D97706}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sec-lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:1rem 0 .5rem}
+.user-btn{display:flex;align-items:center;gap:12px;width:100%;padding:11px 13px;margin-bottom:6px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;text-align:left;transition:all .15s;font-family:var(--font)}
+.user-btn:hover{border-color:var(--accent);background:#fff}
+.u-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;font-family:var(--mono)}
+.u-name{font-size:14px;font-weight:700}
+.u-desc{font-size:11px;color:var(--muted)}
+.monitor-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;margin-top:8px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:700;font-family:var(--font);transition:opacity .15s}
+.monitor-btn:hover{opacity:.88}
+.reset-link{display:block;text-align:center;margin-top:12px;font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;width:100%;font-family:var(--font)}
+
+/* ── TOP BAR ── */
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--card);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:20;gap:8px;flex-wrap:wrap}
+.tb-left{display:flex;align-items:center;gap:10px}
+.tb-av{width:32px;height:32px;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.tb-name{font-size:14px;font-weight:700}
+.tb-role{font-size:11px;color:var(--muted)}
+.tb-right{display:flex;gap:6px;align-items:center}
+.tab-btn{padding:6px 12px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);cursor:pointer;color:var(--muted);font-weight:700;font-family:var(--font);transition:all .15s}
+.tab-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.logout-btn{padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;color:var(--muted);font-family:var(--font)}
+.live-pill{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;background:#ECFDF5;border:1px solid #A7F3D0;padding:4px 9px;border-radius:20px;color:#059669}
+.live-pill.demo{background:#FFFBEB;border-color:#FDE68A;color:#B45309}
+
+/* ── SCREENS ── */
+.screen{display:none}.screen.active{display:block}
+
+/* ── MÓDULO PROCEDIMIENTOS ── */
+.proced-header{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+.proced-type-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+@media(min-width:600px){.proced-type-btns{grid-template-columns:repeat(4,1fr)}}
+.proced-type-btn{padding:14px 10px;border:2px solid var(--border);border-radius:var(--radius);cursor:pointer;background:var(--card);font-family:var(--font);font-size:13px;font-weight:700;color:var(--muted);text-align:center;transition:var(--spring);display:flex;flex-direction:column;align-items:center;gap:6px}
+.proced-type-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+.proced-type-btn.active{border-color:#2563EB;background:#EFF6FF;color:#1E40AF;transform:translateY(-2px);box-shadow:0 4px 12px rgba(37,99,235,.15)}
+.proced-type-btn .icon{font-size:24px}
+.proced-form{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);animation:slideUp .25s ease}
+.proced-form h3{font-size:15px;font-weight:800;color:#1E40AF;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.mat-section{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.mat-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.mat-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.mat-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;flex-wrap:wrap}
+.mat-check{display:flex;align-items:center;gap:7px;cursor:pointer;min-width:140px}
+.mat-check input[type=checkbox]{width:16px;height:16px;accent-color:#2563EB;cursor:pointer;flex-shrink:0}
+.mat-check label{font-size:13px;font-weight:600;cursor:pointer;color:var(--text)}
+.mat-select{padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:var(--font);cursor:pointer}
+.mat-select:focus{outline:none;border-color:#2563EB}
+.mat-qty{width:70px;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:var(--font);text-align:center}
+.mat-qty:focus{outline:none;border-color:#2563EB}
+.proced-patient-sel{width:100%;padding:10px 12px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-family:var(--font);margin-bottom:14px;font-weight:600}
+.proced-patient-sel:focus{outline:none;border-color:#2563EB}
+.proced-obs{width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-family:var(--font);resize:vertical;min-height:56px;margin-top:4px}
+.proced-obs:focus{outline:none;border-color:#2563EB}
+.proced-save-btn{width:100%;padding:11px;background:#2563EB;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:14px;font-weight:700;font-family:var(--font);margin-top:14px;transition:var(--spring)}
+.proced-save-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,.3)}
+.proced-hist{margin-top:18px}
+.proced-hist-item{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:13px;margin-bottom:8px;animation:slideUp .2s ease}
+.proced-hist-item .phi-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.proced-hist-item .phi-name{font-size:14px;font-weight:700}
+.proced-hist-item .phi-type{font-size:11px;font-weight:800;padding:2px 9px;border-radius:20px;background:#EFF6FF;color:#1E40AF}
+.proced-hist-item .phi-meta{font-size:11px;color:var(--muted);margin-bottom:6px}
+.proced-hist-item .phi-mats{font-size:12px;color:#374151;background:#F8F7F4;border-radius:7px;padding:7px 10px;line-height:1.7}
+
+/* ── SE SUBMENU ── */
+.se-submenu{background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:9px;padding:10px 12px;margin-top:4px;animation:slideUp .2s ease}
+.se-submenu .se-label{font-size:11px;font-weight:800;color:#1E40AF;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.se-checks{display:flex;flex-direction:column;gap:6px}
+.se-check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.se-check input[type=checkbox]{width:16px;height:16px;accent-color:#2563EB;cursor:pointer}
+.se-check label{font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer}
+.terms-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;background:var(--bg)}
+.terms-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.75rem;width:100%;max-width:520px;box-shadow:var(--shadow)}
+.terms-card h1{font-size:19px;font-weight:800;margin-bottom:3px;letter-spacing:-.02em}
+.terms-sub{font-size:12px;color:var(--muted);margin-bottom:1.25rem}
+.terms-body{height:320px;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;font-size:12px;line-height:1.8;color:var(--muted);background:var(--bg);margin-bottom:1.25rem}
+.terms-body h3{font-size:12px;font-weight:800;color:var(--text);margin:14px 0 5px;text-transform:uppercase;letter-spacing:.05em}
+.terms-body h3:first-child{margin-top:0}
+.terms-body p{margin-bottom:8px}
+.terms-body li{margin-bottom:4px;margin-left:14px}
+.terms-scroll-hint{font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;opacity:.7}
+.terms-accept-row{display:flex;align-items:flex-start;gap:10px;padding:12px;background:#ECFDF5;border:1.5px solid #A7F3D0;border-radius:10px;margin-bottom:14px;cursor:pointer;transition:all .2s}
+.terms-accept-row:hover{background:#D1FAE5}
+.terms-accept-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:#059669;cursor:pointer}
+.terms-accept-row label{font-size:13px;font-weight:600;color:#065F46;cursor:pointer;line-height:1.5}
+.terms-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:700;font-family:var(--font);transition:all .2s;opacity:.35;pointer-events:none}
+.terms-btn.ready{opacity:1;pointer-events:all}
+.terms-btn.ready:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.terms-version{text-align:center;font-size:10px;color:var(--muted);margin-top:10px}
+.content{padding:14px;max-width:960px;margin:0 auto}
+
+/* ── ADD BOX ── */
+.add-box{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;box-shadow:var(--shadow)}
+.box-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.add-grid input,.add-grid select,.add-grid textarea{padding:9px 11px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-family:var(--font);width:100%;transition:border-color .15s}
+.add-grid input:focus,.add-grid select:focus,.add-grid textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.full{grid-column:1/-1}
+.add-btn{padding:9px;background:var(--accent);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;width:100%;margin-top:4px;font-family:var(--font);transition:opacity .15s}
+.add-btn:hover{opacity:.88}
+
+/* ── ALERT SUMMARY ── */
+.alert-summary{margin-bottom:12px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:var(--radius);padding:10px 14px;display:flex;align-items:flex-start;gap:10px}
+.alert-summary.hidden{display:none}
+.as-icon{font-size:20px;flex-shrink:0}
+.as-text{font-size:13px;font-weight:700;color:#991B1B}
+.as-sub{font-size:11px;color:#DC2626;margin-top:2px;line-height:1.5}
+
+/* ── QUEUE CARDS ── */
+.queue-section{margin-bottom:10px}
+.q-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:var(--radius) var(--radius) 0 0;border:1.5px solid transparent}
+.qh-l{display:flex;align-items:center;gap:10px}
+.qh-dot{width:9px;height:9px;border-radius:50%}
+.qh-name{font-size:14px;font-weight:800}
+.qh-sub{font-size:11px;opacity:.7}
+.qh-badge{font-size:14px;font-weight:900;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.13)}
+.q-body{background:var(--card);border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
+.p-row{display:flex;align-items:flex-start;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);gap:8px}
+.p-row:last-child{border-bottom:none}
+.p-row.alert-warn{background:#FFFBEB;border-left:3px solid #D97706}
+.p-row.alert-over{background:#FEF2F2;border-left:3px solid #DC2626;animation:flashRow 2s infinite}
+@keyframes flashRow{0%,100%{background:#FEF2F2}50%{background:#FEE2E2}}
+.p-left{display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0}
+.p-num{font-size:20px;font-weight:900;min-width:26px;text-align:right;flex-shrink:0;font-family:var(--mono);line-height:1.2}
+.p-name{font-size:14px;font-weight:700}
+.p-rut{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.p-tipo-full{font-size:11px;font-weight:700;color:var(--muted);margin-top:2px}
+.wait-ok{font-size:11px;color:var(--muted)}
+.wait-warn{font-size:11px;color:#B45309;font-weight:700}
+.wait-over{font-size:11px;color:#DC2626;font-weight:800}
+.time-limit-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:800;margin-left:5px;vertical-align:middle}
+.time-limit-badge.ok{background:#ECFDF5;color:#065F46}
+.time-limit-badge.warn{background:#FFFBEB;color:#B45309}
+.time-limit-badge.over{background:#FEF2F2;color:#DC2626;animation:pulseBadge 1.5s infinite}
+@keyframes pulseBadge{0%,100%{opacity:1}50%{opacity:.5}}
+.time-bar-wrap{background:#F3F4F6;border-radius:4px;height:5px;margin-top:5px;overflow:hidden}
+.time-bar-fill{height:100%;border-radius:4px;transition:width .5s,background .3s}
+.time-bar-fill.ok{background:#059669}
+.time-bar-fill.warn{background:#D97706}
+.time-bar-fill.over{background:#DC2626}
+.p-note{font-size:12px;color:#374151;background:#F0FDF4;border-left:3px solid #059669;padding:5px 8px;border-radius:0 6px 6px 0;margin-top:5px;font-style:italic;line-height:1.4}
+.take-btn{padding:7px 13px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;font-family:var(--font);transition:opacity .15s}
+.take-btn:hover{opacity:.85}
+.other-tag{font-size:11px;color:var(--muted);padding:4px 9px;background:var(--bg);border-radius:7px;border:1px solid var(--border);white-space:nowrap;flex-shrink:0}
+.q-empty{padding:16px;text-align:center;font-size:13px;color:var(--muted)}
+
+/* ── ATTENDING ── */
+.att-section{margin-top:18px}
+.sec-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+.att-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:15px;margin-bottom:10px;border-left-width:4px;box-shadow:var(--shadow)}
+.att-card.att-warn{background:#FFFDF5}
+.att-card.att-over{background:#FFF5F5;animation:flashAtt 2s infinite}
+@keyframes flashAtt{0%,100%{background:#FFF5F5}50%{background:#FEE2E2}}
+.att-name{font-size:18px;font-weight:800;margin-bottom:1px}
+.att-rut{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:2px}
+.att-sigla{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:800;background:#F3F4F6;color:#374151;border:1px solid #E5E7EB;margin-bottom:6px}
+.att-from{font-size:12px;color:var(--muted);margin-bottom:8px}
+.att-alert-banner{display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:10px}
+.att-alert-banner.warn{background:#FFFBEB;color:#B45309;border:1px solid #FDE68A}
+.att-alert-banner.over{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;animation:pulseBadge 1.5s infinite}
+.att-timer{font-size:32px;font-weight:800;font-family:var(--mono);letter-spacing:-.03em;margin-bottom:6px}
+.att-progress-wrap{margin-bottom:12px}
+.att-progress-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.att-progress-elapsed{font-size:13px;font-weight:700;font-family:var(--mono)}
+.att-progress-limit{font-size:11px;color:var(--muted);font-weight:600}
+.att-progress-bar{height:10px;background:#F3F4F6;border-radius:6px;overflow:hidden}
+.att-progress-fill{height:100%;border-radius:6px;transition:width 1s linear,background .3s}
+.att-progress-fill.ok{background:linear-gradient(90deg,#059669,#34D399)}
+.att-progress-fill.warn{background:linear-gradient(90deg,#D97706,#FBBF24)}
+.att-progress-fill.over{background:linear-gradient(90deg,#DC2626,#F87171);animation:flashFill 1s infinite}
+@keyframes flashFill{0%,100%{opacity:1}50%{opacity:.6}}
+.p-note-display{font-size:12px;color:#374151;background:#F0FDF4;border-left:3px solid #059669;padding:6px 10px;border-radius:0 7px 7px 0;margin-bottom:12px;font-style:italic;line-height:1.5}
+.achs-btn{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#1E40AF;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);margin-bottom:10px;width:100%;justify-content:center;transition:opacity .15s}
+.achs-btn:hover{opacity:.88}
+.derivar-btn{padding:9px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);width:100%;text-align:center;transition:all .15s}
+.derivar-btn:hover{border-color:var(--accent);background:#fff}
+
+/* ── MONITOR ── */
+#screen-monitor{background:var(--bg);min-height:100vh}
+.mon-hdr{background:var(--card);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid var(--border);flex-wrap:wrap;gap:8px}
+.mon-brand{font-size:18px;font-weight:800;color:var(--text)}
+.mon-sub{font-size:11px;color:var(--muted)}
+.mon-clock{font-size:15px;font-weight:700;color:var(--muted);font-family:var(--mono)}
+.mon-grid{padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.mon-q{border-radius:14px;overflow:hidden;border:1.5px solid var(--border);background:var(--card);box-shadow:var(--shadow)}
+.mon-qh{padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.mon-qname{font-size:13px;font-weight:800}
+.mon-qcount{font-size:28px;font-weight:900;font-family:var(--mono)}
+.mon-att{padding:9px 16px;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.03)}
+.mon-att-name{font-size:13px;color:var(--text);font-weight:600}
+.mon-tag-att{font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;color:#fff;text-transform:uppercase}
+.mon-pr{padding:9px 16px;display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--border)}
+.mon-pnum{font-size:22px;font-weight:900;min-width:28px;font-family:var(--mono);line-height:1.1}
+.mon-pinfo{flex:1;min-width:0}
+.mon-pname{font-size:13px;color:var(--text);font-weight:600}
+.mon-prut{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.mon-psigla{font-size:11px;font-weight:700;color:var(--muted);margin-top:1px}
+.mon-pnote{font-size:11px;color:var(--muted);margin-top:2px;font-style:italic}
+.mon-pwait{font-size:11px;color:var(--muted);white-space:nowrap}
+.mon-empty{padding:16px;font-size:12px;color:var(--muted);text-align:center}
+.mon-back{text-align:center;padding:10px}
+.mon-back button{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);padding:6px 14px;border-radius:7px;cursor:pointer;font-family:var(--font)}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media(min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+.stat-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:13px}
+.stat-lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.stat-val{font-size:28px;font-weight:800;font-family:var(--mono)}
+.export-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:#059669;color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:700;margin-bottom:14px;width:100%;font-family:var(--font);transition:opacity .15s}
+.export-btn:hover{opacity:.88}
+.chart-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.chart-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+.bar-chart{display:flex;flex-direction:column;gap:9px}
+.b-row{display:flex;align-items:center;gap:10px}
+.b-lbl{width:110px;font-size:11px;font-weight:700;color:var(--muted);text-align:right;flex-shrink:0}
+.b-wrap{flex:1;background:var(--bg);border-radius:4px;height:20px;overflow:hidden}
+.b-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:800;color:#fff;transition:width .6s}
+.b-val{font-size:12px;font-weight:800;font-family:var(--mono);width:38px;text-align:right}
+.hist-wrap{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);overflow:auto}
+.hist-wrap table{width:100%;min-width:620px;border-collapse:collapse;font-size:13px}
+.hist-wrap th{text-align:left;padding:9px 12px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;border-bottom:1.5px solid var(--border)}
+.hist-wrap td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.hist-wrap tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-bg.open{opacity:1;pointer-events:all}
+.modal{background:var(--card);border-radius:16px;padding:1.5rem;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2);transform:translateY(12px);transition:transform .2s;max-height:90vh;overflow-y:auto}
+.modal-bg.open .modal{transform:translateY(0)}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:.2rem}
+.modal .minfo{font-size:13px;color:var(--muted);margin-bottom:1rem}
+.modal label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px;margin-top:12px}
+.modal textarea,.modal select{width:100%;padding:10px 12px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-family:var(--font);transition:border-color .15s}
+.modal textarea{resize:vertical;min-height:70px}
+.modal textarea:focus,.modal select:focus{outline:none;border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;margin-top:14px}
+.modal-cancel{flex:1;padding:10px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;cursor:pointer;font-size:14px;font-weight:700;font-family:var(--font)}
+.modal-confirm{flex:2;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:14px;font-weight:800;font-family:var(--font);transition:opacity .15s}
+.modal-confirm:hover{opacity:.88}
+
+/* ── EGRESO CHECKLIST ── */
+.chk-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.chk-item.checked{background:#ECFDF5;border-color:#A7F3D0}
+.chk-item input[type=checkbox]{width:18px;height:18px;flex-shrink:0;margin-top:1px;cursor:pointer;accent-color:#059669}
+.chk-item label{font-size:13px;font-weight:600;cursor:pointer;line-height:1.4}
+.chk-item.checked label{color:#065F46}
+.chk-warn{font-size:12px;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:none}
+.firma-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:#059669;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:14px;font-weight:800;font-family:var(--font);width:100%;margin-top:4px;transition:opacity .15s}
+.firma-btn:hover{opacity:.88}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--accent);color:#F5F5F4;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:999;opacity:0;transform:translateY(8px);transition:all .22s;pointer-events:none;max-width:280px}
+.toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── TÉRMINOS DE USO ── -->
+<div class="screen" id="screen-terms">
+  <div class="terms-wrap"><div class="terms-card">
+    <h1>📋 Términos y Condiciones</h1>
+    <p class="terms-sub">CPAclinicsistem — Cristóbal Fabián Pacheco Acuña, RUT 20.161.716-2</p>
+    <div class="terms-body" id="terms-body">
+      <h3>1. Aceptación y declaración de autoría</h3>
+      <p>Al marcar la casilla de aceptación, el usuario declara que reconoce que <strong>CPAclinicsistem es una obra de autoría exclusiva y completa de Cristóbal Fabián Pacheco Acuña, RUT 20.161.716-2</strong>, desarrollada íntegramente por él, incluyendo su concepto, diseño, lógica de funcionamiento, código fuente y todos sus elementos constitutivos, sin que ningún tercero pueda atribuirse derechos sobre la misma.</p>
+      <p>El usuario comprende que el uso actual de la Aplicación, sea gratuito o en condiciones especiales, <strong>no implica renuncia alguna del Desarrollador a cobrar por su uso en el futuro</strong>. Cristóbal Fabián Pacheco Acuña podrá establecer tarifas o condiciones de pago en cualquier momento, con aviso previo.</p>
+
+      <h3>2. Descripción del servicio</h3>
+      <p>CPAclinicsistem es una aplicación web para la gestión de filas y flujos de atención en centros de salud, incluyendo registro de pacientes, tiempos de espera, notas clínicas y exportación de datos.</p>
+
+      <h3>3. Propiedad intelectual</h3>
+      <p>Queda expresamente prohibido copiar, reproducir, modificar, distribuir o comercializar la Aplicación o versiones derivadas sin autorización escrita del Desarrollador. El usuario adquiere únicamente una licencia de uso no exclusiva e intransferible.</p>
+
+      <h3>4. Datos y privacidad</h3>
+      <p>La Aplicación almacena datos en Firebase (Google LLC), en servidores en Estados Unidos. El Cliente es responsable de cumplir con la Ley N° 19.628 sobre Protección de la Vida Privada y de obtener los consentimientos necesarios de los pacientes.</p>
+
+      <h3>5. Limitación de responsabilidad</h3>
+      <p>El Desarrollador no será responsable por interrupciones atribuibles a servicios de terceros (Firebase, Netlify), pérdida de datos por configuración incorrecta del Cliente, ni por decisiones clínicas tomadas con base en los datos registrados.</p>
+
+      <h3>6. Modificaciones y costos futuros</h3>
+      <p>El Desarrollador podrá modificar estos Términos o establecer condiciones de pago en cualquier momento, notificando al usuario con al menos 15 días de anticipación. El uso continuado implicará aceptación de las nuevas condiciones.</p>
+
+      <h3>7. Legislación aplicable</h3>
+      <p>Estos Términos se rigen por las leyes de la República de Chile. Cualquier controversia se somete a los Tribunales Ordinarios de Justicia de Los Ángeles, Región del Biobío.</p>
+    </div>
+    <p class="terms-scroll-hint">↑ Desplázate para leer los términos completos</p>
+
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:13px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Identificación del aceptante</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input id="terms-nombre" placeholder="Nombre completo *" style="padding:9px 11px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-family:var(--font);width:100%" oninput="updateTermsBtn()"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="terms-rut" placeholder="RUT (ej: 12345678-9) *" style="padding:9px 11px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-family:var(--font)" oninput="onTermsRut(this);updateTermsBtn()"/>
+          <input id="terms-org" placeholder="Organización / Centro *" style="padding:9px 11px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-family:var(--font)" oninput="updateTermsBtn()"/>
+        </div>
+        <div id="rut-hint" style="display:none;font-size:12px;color:#065F46;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;margin-top:4px"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:8px">* Estos datos quedan registrados con fecha y hora exacta como respaldo legal de la aceptación.</div>
+    </div>
+
+    <div class="terms-accept-row" onclick="toggleTermsCheck()">
+      <input type="checkbox" id="terms-chk" onclick="event.stopPropagation();updateTermsBtn()"/>
+      <label for="terms-chk">He leído y acepto los Términos y Condiciones. Reconozco que <strong>CPAclinicsistem es autoría exclusiva de Cristóbal Fabián Pacheco Acuña</strong> y que el servicio podría estar asociado a costos en el momento que el Desarrollador lo decida.</label>
+    </div>
+    <div id="terms-err" style="font-size:12px;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:none">⚠ Debes completar todos los campos y marcar la casilla antes de continuar.</div>
+    <button class="terms-btn" id="terms-btn" onclick="aceptarTerminos()">Aceptar y continuar →</button>
+    <p class="terms-version">Versión 1.0 · CPAclinicsistem © 2025 Cristóbal Fabián Pacheco Acuña</p>
+  </div></div>
+</div>
+
+<!-- ── SETUP ── -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-wrap"><div class="setup-card">
+    <h1>🏥 Conectar Firebase</h1>
+    <p class="sub">Solo tú haces esto una vez. Después todos abren la misma URL y ven todo en tiempo real.</p>
+    <div class="step-box"><div class="step-num">Paso 1 — Crear proyecto</div><div class="step-txt">Ve a <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → "Agregar proyecto" → nombre <code>centro-medico</code> → desactiva Google Analytics → Crear.</div></div>
+    <div class="step-box"><div class="step-num">Paso 2 — Activar base de datos</div><div class="step-txt">Menú izquierdo → <strong>Realtime Database</strong> → "Crear base de datos" → ubicación <code>us-central1</code> → selecciona <strong>Modo de prueba</strong> → Habilitar.</div></div>
+    <div class="step-box"><div class="step-num">Paso 3 — Obtener credenciales</div><div class="step-txt">Icono ⚙️ → "Configuración del proyecto" → pestaña "General" → baja a "Tus apps" → clic en <code>&lt;/&gt;</code> → Registra la app → copia los 4 valores que aparecen.</div></div>
+    <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;color:#B45309;margin-bottom:6px">📋 SOLO COPIA ESTOS 4 VALORES:</div>
+      <code style="display:block;font-size:12px;color:#92400E;line-height:2">apiKey: "AIzaSy..."<br>authDomain: "centro-medico.firebaseapp.com"<br>databaseURL: "https://centro-medico-default-rtdb.firebaseio.com"<br>projectId: "centro-medico"</code>
+    </div>
+    <div class="field-lbl">API Key</div>
+    <input class="field-inp" id="cfg-apikey" placeholder="AIzaSy..."/>
+    <div class="field-lbl">Auth Domain</div>
+    <input class="field-inp" id="cfg-authdomain" placeholder="centro-medico.firebaseapp.com"/>
+    <div class="field-lbl">Database URL</div>
+    <input class="field-inp" id="cfg-dburl" placeholder="https://centro-medico-default-rtdb.firebaseio.com"/>
+    <div class="field-lbl">Project ID</div>
+    <input class="field-inp" id="cfg-projectid" placeholder="centro-medico"/>
+    <div id="setup-err" class="err-box"></div>
+    <button class="connect-btn" id="connect-btn" onclick="connectFirebase()">Conectar y guardar</button>
+    <button class="demo-link" onclick="usarDemo()">Usar modo demo (datos locales, sin sincronización)</button>
+  </div></div>
+</div>
+
+<!-- ── LOGIN ── -->
+<div class="screen" id="screen-login">
+  <div class="login-wrap"><div class="login-card">
+    <div class="brand"><div class="brand-icon" onclick="clickLogo()" style="cursor:pointer" title="🐓">🏥</div><div><h2>CPAclinicsistem</h2><p>Sistema de filas</p></div></div>
+    <div class="sync-badge" id="sync-badge"><div class="dot green"></div><span id="sync-txt">Conectado — sincronización activa</span></div>
+
+    <!-- Campo nombre -->
+    <div class="sec-lbl">Tu nombre</div>
+    <div style="position:relative;margin-bottom:4px">
+      <input id="login-nombre" placeholder="Escribe tu nombre (ej: Vilma, Cristóbal...)"
+        style="width:100%;padding:10px 12px;font-size:14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);transition:all .2s;font-weight:600"
+        oninput="filterRecentNames(this.value)"
+        onfocus="showRecentNames()"
+        onblur="setTimeout(hideRecentNames,200)"
+        onkeydown="if(event.key==='Enter')this.blur()"/>
+      <!-- Últimos 3 nombres -->
+      <div id="recent-names" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1.5px solid var(--border);border-radius:0 0 10px 10px;overflow:hidden;z-index:10;box-shadow:var(--shadow)"></div>
+    </div>
+    <div id="login-nombre-err" style="font-size:11px;color:#DC2626;display:none;margin-bottom:6px">⚠ Escribe tu nombre antes de continuar</div>
+
+    <div class="sec-lbl">¿Cuál es tu rol?</div>
+    <button class="user-btn" onclick="loginConNombre('admin','admin')"><div class="u-av" style="background:#F0F9FF;color:#0369A1">AD</div><div><div class="u-name">Administrador</div><div class="u-desc">Acceso completo + estadísticas</div></div></button>
+    <button class="user-btn" onclick="loginConNombre('admision','admision')"><div class="u-av" style="background:#FFFBEB;color:#B45309">AM</div><div><div class="u-name">Admisión</div><div class="u-desc">Registra pacientes y gestiona egreso</div></div></button>
+    <button class="user-btn" onclick="loginConNombre('medico','medico')"><div class="u-av" style="background:#F9FAFB;color:#374151">MD</div><div><div class="u-name">Médico/a</div><div class="u-desc">Atención médica</div></div></button>
+    <button class="user-btn" onclick="loginConNombre('enfermero','enfermero')"><div class="u-av" style="background:#ECFDF5;color:#065F46">EN</div><div><div class="u-name">Enfermero/a</div><div class="u-desc">Procedimientos clínicos</div></div></button>
+    <button class="user-btn" onclick="loginConNombre('tens','tens')"><div class="u-av" style="background:#EFF6FF;color:#1D4ED8">TN</div><div><div class="u-name">TENS</div><div class="u-desc">Botiquín / Entrega medicamentos</div></div></button>
+    <div class="sec-lbl">Sala de espera</div>
+    <button class="monitor-btn" onclick="login('monitor','Monitor','monitor')">🖥 Pantalla sala de espera</button>
+    <button class="reset-link" onclick="resetConfig()">Cambiar configuración</button>
+  </div></div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="screen" id="screen-main">
+  <div class="top-bar">
+    <div class="tb-left"><div class="tb-av" id="tb-av"></div><div><div class="tb-name" id="tb-name"></div><div class="tb-role" id="tb-role"></div></div></div>
+    <div class="tb-right">
+      <div class="live-pill" id="live-pill"><div class="dot green"></div><span id="live-txt">EN VIVO</span></div>
+      <button class="tab-btn on" id="btn-filas" onclick="toggleFilas()">🏥 Filas</button>
+      <button class="tab-btn" id="btn-proced" onclick="showTab('proced')" style="display:none">📋 Procedimientos</button>
+      <button class="tab-btn" id="btn-stats" onclick="showTab('stats')">📊 Datos</button>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+  </div>
+  <div id="tab-filas"><div class="content">
+    <div id="add-zone"></div>
+    <div class="alert-summary hidden" id="alert-box"></div>
+    <div class="att-section"><div class="sec-title">⏱ En atención ahora</div><div id="att-zone"></div></div>
+    <div id="queues-zone"></div>
+  </div></div>
+  <div id="tab-proced" style="display:none"><div class="content" id="proced-content"></div></div>
+  <div id="tab-stats" style="display:none"><div class="content">
+    <div class="stats-grid" id="stats-sum"></div>
+    <button class="export-btn" onclick="exportExcel()">⬇ Exportar a Excel (.xlsx)</button>
+    <div class="chart-card"><div class="chart-title">Espera promedio por etapa (min)</div><div class="bar-chart" id="chart-w"></div></div>
+    <div class="chart-card"><div class="chart-title">Atención promedio por etapa (min)</div><div class="bar-chart" id="chart-a"></div></div>
+    <div class="hist-wrap" id="hist-wrap"></div>
+  </div></div>
+</div>
+
+<!-- ── MONITOR ── -->
+<div class="screen" id="screen-monitor">
+  <div class="mon-hdr"><div><div class="mon-brand">CPAclinicsistem — Sala de Espera</div><div class="mon-sub" id="mon-date"></div></div><div class="mon-clock" id="mon-clock"></div></div>
+  <div class="mon-grid" id="mon-grid"></div>
+  <div class="mon-back"><button onclick="logout()">← Cambiar usuario</button></div>
+</div>
+
+<!-- ── MODAL DERIVAR ── -->
+<div class="modal-bg" id="modal-derivar">
+  <div class="modal">
+    <h3>Derivar paciente</h3>
+    <div class="minfo" id="modal-pinfo"></div>
+    <label>Enviar a</label>
+    <select id="modal-dest" onchange="onModalDestChange(this.value)"></select>
+
+    <!-- Submenú procedimientos — aparece solo al seleccionar esa fila -->
+    <div id="proc-submenu" style="display:none;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-top:10px;animation:slideUp .2s ease">
+      <div style="font-size:11px;font-weight:800;color:#1E40AF;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Procedimientos a realizar <span style="font-weight:500;text-transform:none">(selecciona todos los que aplican)</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleProc('proc-ev')">
+          <input type="checkbox" id="proc-ev" style="width:17px;height:17px;accent-color:#2563EB;cursor:pointer" onclick="event.stopPropagation();checkProcEv()"/>
+          <label for="proc-ev" style="font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer;flex:1">💉 Endovenoso</label>
+        </div>
+        <!-- Sub-indicación EV — aparece al marcar endovenoso -->
+        <div id="ev-indicacion" style="display:none;margin-left:26px;background:#DBEAFE;border-radius:8px;padding:9px 12px;animation:slideUp .2s ease">
+          <div style="font-size:11px;font-weight:700;color:#1D4ED8;margin-bottom:6px">Indicación EV</div>
+          <textarea id="proc-ev-text" placeholder="Ej: Ketoprofeno 200mg en 100ml SF pasar en 30min..." style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #BFDBFE;border-radius:7px;background:#fff;color:#1E3A8A;font-family:var(--font);resize:vertical;min-height:56px"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleProc('proc-sl')">
+          <input type="checkbox" id="proc-sl" style="width:17px;height:17px;accent-color:#2563EB;cursor:pointer" onclick="event.stopPropagation()"/>
+          <label for="proc-sl" style="font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer">💊 Sublingual</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleProc('proc-inm')">
+          <input type="checkbox" id="proc-inm" style="width:17px;height:17px;accent-color:#2563EB;cursor:pointer" onclick="event.stopPropagation()"/>
+          <label for="proc-inm" style="font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer">🩹 Inmovilización</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleProc('proc-cur')">
+          <input type="checkbox" id="proc-cur" style="width:17px;height:17px;accent-color:#2563EB;cursor:pointer" onclick="event.stopPropagation()"/>
+          <label for="proc-cur" style="font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer">🔬 Curación</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleProc('proc-cnt')">
+          <input type="checkbox" id="proc-cnt" style="width:17px;height:17px;accent-color:#2563EB;cursor:pointer" onclick="event.stopPropagation()"/>
+          <label for="proc-cnt" style="font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer">🤝 Contención no Ley</label>
+        </div>
+      </div>
+    </div>
+
+    <label style="margin-top:12px">Nota adicional (opcional)</label>
+    <textarea id="modal-note" placeholder="Observaciones adicionales..."></textarea>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('derivar')">Cancelar</button>
+      <button class="modal-confirm" onclick="confirmDerivacion()">Confirmar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL EGRESO ── -->
+<div class="modal-bg" id="modal-egreso">
+  <div class="modal">
+    <h3>✅ Checklist de egreso</h3>
+    <div class="minfo" id="egreso-pinfo"></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">Confirma antes de dar el alta:</p>
+    <div class="chk-item" id="chk1-box" onclick="toggleChk('chk1')"><input type="checkbox" id="chk1" onclick="event.stopPropagation();syncChk('chk1')"/><label for="chk1">📋 Se revisaron y explicaron las <strong>indicaciones médicas</strong></label></div>
+    <div class="chk-item" id="chk2-box" onclick="toggleChk('chk2')"><input type="checkbox" id="chk2" onclick="event.stopPropagation();syncChk('chk2')"/><label for="chk2">📅 Se informaron los <strong>próximos controles</strong> si corresponde</label></div>
+    <div class="chk-item" id="chk3-box" onclick="toggleChk('chk3')"><input type="checkbox" id="chk3" onclick="event.stopPropagation();syncChk('chk3')"/><label for="chk3">💊 Se entregaron los <strong>medicamentos</strong> según corresponda</label></div>
+    <div class="chk-warn" id="chk-warn">⚠ Debes confirmar los tres puntos antes de continuar.</div>
+    <label style="margin-top:14px">Nota de egreso (opcional)</label>
+    <textarea id="egreso-note" placeholder="Ej: Alta en buenas condiciones. Control en 7 días." style="width:100%;padding:9px 11px;font-size:13px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-family:var(--font);resize:vertical;min-height:60px;margin-top:5px"></textarea>
+    <div style="margin-top:12px;padding:10px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:9px;font-size:12px;color:#1E40AF;font-weight:600">🔗 Al confirmar se abrirá el sistema de firma digital ACHS.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('egreso')">Cancelar</button>
+      <button class="firma-btn" onclick="confirmarEgreso()">Abrir Firma Digital ACHS →</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- GALLO EASTER EGG -->
+<div id="gallo-overlay" onclick="cerrarGallo()">
+  <svg id="gallo-svg" width="160" height="160" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <!-- cuerpo -->
+    <ellipse cx="50" cy="65" rx="26" ry="22" fill="#D97706"/>
+    <!-- cabeza -->
+    <circle cx="50" cy="34" r="14" fill="#F59E0B"/>
+    <!-- cresta -->
+    <ellipse cx="50" cy="20" rx="5" ry="8" fill="#DC2626" transform="rotate(-10,50,20)"/>
+    <ellipse cx="57" cy="18" rx="4" ry="7" fill="#DC2626" transform="rotate(5,57,18)"/>
+    <ellipse cx="43" cy="19" rx="4" ry="7" fill="#DC2626" transform="rotate(-20,43,19)"/>
+    <!-- barbilla -->
+    <ellipse cx="50" cy="45" rx="4" ry="5" fill="#DC2626"/>
+    <!-- ojo -->
+    <circle cx="56" cy="31" r="3" fill="#1C1917"/>
+    <circle cx="57" cy="30" r="1" fill="#fff"/>
+    <!-- pico -->
+    <polygon points="62,34 70,36 62,38" fill="#F59E0B"/>
+    <!-- ala -->
+    <ellipse cx="38" cy="65" rx="10" ry="16" fill="#B45309" transform="rotate(-15,38,65)"/>
+    <!-- cola -->
+    <ellipse cx="72" cy="58" rx="8" ry="14" fill="#92400E" transform="rotate(30,72,58)"/>
+    <ellipse cx="76" cy="52" rx="6" ry="12" fill="#B45309" transform="rotate(45,76,52)"/>
+    <!-- patas -->
+    <line x1="44" y1="86" x2="42" y2="98" stroke="#B45309" stroke-width="3" stroke-linecap="round"/>
+    <line x1="56" y1="86" x2="58" y2="98" stroke="#B45309" stroke-width="3" stroke-linecap="round"/>
+    <line x1="42" y1="98" x2="36" y2="100" stroke="#B45309" stroke-width="2"/>
+    <line x1="42" y1="98" x2="44" y2="102" stroke="#B45309" stroke-width="2"/>
+    <line x1="58" y1="98" x2="64" y2="100" stroke="#B45309" stroke-width="2"/>
+    <line x1="58" y1="98" x2="56" y2="102" stroke="#B45309" stroke-width="2"/>
+  </svg>
+  <div class="gallo-text">¡KIKIRIKIIII! 🐓<br><span style="font-size:13px;opacity:.8">Clic para cerrar</span></div>
+</div>
+
+<!-- POLLITO LOADING -->
+<div id="pollito-loading">
+  <div class="pollito-wrap">
+    <div class="cascaron-bottom"></div>
+    <div class="cascaron-top"></div>
+    <div class="pollito-cara">🐣</div>
+  </div>
+  <div class="pollito-texto">Conectando... ¡Ya casi sale! 🥚</div>
+</div>
+
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
+const QUEUES=[
+  {id:'admision',       name:'Admisión',               color:'#D97706',bg:'#FFFBEB',bd:'#FDE68A',tc:'#92400E', roles:['admin','admision']},
+  {id:'atencion',       name:'Atención médica',         color:'#6B7280',bg:'#F9FAFB',bd:'#E5E7EB',tc:'#374151', roles:['admin','medico']},
+  {id:'procedimientos', name:'Procedimientos',          color:'#2563EB',bg:'#EFF6FF',bd:'#BFDBFE',tc:'#1E40AF', roles:['admin','enfermero','tens','medico']},
+  {id:'botiquin',       name:'Botiquín / Medicamentos', color:'#059669',bg:'#ECFDF5',bd:'#A7F3D0',tc:'#065F46', roles:['admin','enfermero','tens']},
+  {id:'egreso',         name:'Egreso',                  color:'#7C3AED',bg:'#F5F3FF',bd:'#DDD6FE',tc:'#4C1D95', roles:['admin','admision']},
+];
+const TIPOS=[
+  {val:'',    label:'— Seleccionar tipo —'},
+  {val:'CM',  label:'CM — Control médico agendado'},
+  {val:'SNL', label:'SNL — Salud no laboral'},
+  {val:'SE',  label:'SE — Servicio evaluaciones laborales'},
+  {val:'IA',  label:'IA — Ingreso accidente'},
+  {val:'IEP', label:'IEP — Ingreso enfermedad profesional'},
+  {val:'LK',  label:'LK — Ley Karin'},
+  {val:'EPA', label:'EPA — Enfermedad profesional agendado'},
+  {val:'CD',  label:'CD — Confirmación diagnóstica'},
+  {val:'INF', label:'INF — Informaciones'},
+  {val:'RM',  label:'RM — Retiro de medicamentos'},
+  {val:'CRO', label:'CRO — Crónicos'},
+  {val:'CUR', label:'CUR — Curaciones'},
+  {val:'GNP', label:'GNP — Gestión no presencial'},
+];
+const ROLES={admin:'Administrador',admision:'Admisión',medico:'Médico/a',enfermero:'Enfermero/a',tens:'TENS',monitor:'Monitor'};
+const AVCOL={admin:['#F0F9FF','#0369A1'],admision:['#FFFBEB','#B45309'],medico:['#F9FAFB','#374151'],enfermero:['#ECFDF5','#065F46'],tens:['#EFF6FF','#1D4ED8'],monitor:['#1C1917','#F5F5F4']};
+
+// ── ALERTAS ───────────────────────────────────────────────────────────────────
+// ── ALERTAS ───────────────────────────────────────────────────────────────────
+// Tiempos de ESPERA en fila (ms)
+const ALERT_WAIT={
+  CM:  10*60000,  // Control médico agendado     → 10 min
+  SNL: 10*60000,  // Salud no laboral            → 10 min
+  IEP: 10*60000,  // Ingreso EP                  → 10 min
+  EPA: 10*60000,  // EP agendado                 → 10 min
+  IA:  30*60000,  // Ingreso accidente           → 30 min
+  _def:30*60000,
+};
+// Tiempos de ATENCIÓN médica (ms)
+const ALERT_ATT={
+  CM:  18*60000,  // Control médico agendado     → 18 min
+  IA:  18*60000,  // Ingreso accidente           → 18 min
+  IEP: 18*60000,  // Ingreso EP                  → 18 min
+  LK:  18*60000,  // Ley Karin                   → 18 min
+  EPA: 36*60000,  // EP agendado                 → 36 min
+};
+
+function waitLimit(tipo){return ALERT_WAIT[tipo]||ALERT_WAIT._def;}
+function attLimit(tipo){return ALERT_ATT[tipo]||null;}
+function level(ms,limit){if(!limit)return'ok';const p=ms/limit;return p>=1?'over':p>=0.8?'warn':'ok';}
+function tipoLabel(v){const t=TIPOS.find(x=>x.val===v);return t?t.label:v;}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let S={user:null,demo:false,key:null,binId:null,
+  patients:{},attending:{},completed:[],
+  syncInt:null,tickInt:null,monInt:null,
+  modalPid:null,egresoMid:null,egresoNote:'',syncing:false};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const now=()=>Date.now();
+function fmt(ms){const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60);return h>0?h+'h '+(m%60)+'m':m>0?m+'m '+(s%60)+'s':s+'s';}
+function fmtMin(ms){return Math.round(ms/60000);}
+function initials(n){return n.trim().split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';}
+function qInfo(id){return QUEUES.find(q=>q.id===id)||QUEUES[0];}
+function canManage(qid){return qInfo(qid).roles.includes(S.user?.role);}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+function formatRut(r){r=r.replace(/[^0-9kK]/g,'').toUpperCase();if(r.length<2)return r;const dv=r.slice(-1),num=r.slice(0,-1);return num+'-'+dv;}
+function onRut(el){el.value=formatRut(el.value);}
+
+// ── FIREBASE CREDENTIALS (incrustadas — no requiere configuración) ─────────────
+const FB_CFG = {
+  apiKey:      "AIzaSyB58kv2yPtWAx9FwVd2HpM2MZkSphGu1eM",
+  authDomain:  "sistema-cristobal-pacheco.firebaseapp.com",
+  databaseURL: "https://sistema-cristobal-pacheco-default-rtdb.firebaseio.com",
+  projectId:   "sistema-cristobal-pacheco",
+};
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+function loadCfg(){return FB_CFG;}
+function saveCfg(){}
+function resetConfig(){location.reload();}
+
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+async function connectFirebase(){
+  const apiKey=$('cfg-apikey').value.trim();
+  const authDomain=$('cfg-authdomain').value.trim();
+  const dbURL=$('cfg-dburl').value.trim().replace(/\/+$/,''); // quita barras al final
+  const projectId=$('cfg-projectid').value.trim();
+  if(!apiKey||!dbURL){showErr('API Key y Database URL son obligatorios');return;}
+  const btn=$('connect-btn');btn.disabled=true;btn.textContent='Conectando...';
+  const cfg={apiKey,authDomain,databaseURL:dbURL,projectId};
+  try{
+    await initFirebase(cfg);
+    saveCfg(cfg);
+    showScreen('screen-login');
+    toast('¡Conectado correctamente! ✓');
+  }catch(e){
+    showErr('Error: '+e.message+' — URL usada: '+dbURL);
+    btn.disabled=false;btn.textContent='Conectar y guardar';
+  }
+}
+
+async function initFirebase(cfg){
+  // Delete existing apps cleanly
+  for(const app of firebase.apps){
+    try{ await app.delete(); }catch(e){}
+  }
+  const app = firebase.initializeApp(cfg);
+  S.db = firebase.database(app);
+  // Just check connection without throwing on null
+  try{
+    await S.db.ref('ping').set(1);
+    await S.db.ref('ping').remove();
+  }catch(e){
+    throw new Error('No se pudo escribir en la base de datos. Verifica las reglas en Firebase (deben ser true/true).');
+  }
+}
+
+function showErr(msg){const d=$('setup-err');d.textContent=msg;d.style.display='block';}
+
+function usarDemo(){
+  S.demo=true;
+  $('sync-badge').className='sync-badge demo';
+  $('sync-badge').querySelector('.dot').className='dot amber';
+  $('sync-txt').textContent='Modo demo — datos locales';
+  const demos=[
+    {name:'María González',rut:'12.345.678-9',tipo:'CM',q:'admision',off:720000},
+    {name:'Pedro Rojas',rut:'9.876.543-K',tipo:'IA',q:'admision',off:480000},
+    {name:'Ana Martínez',rut:'15.234.567-3',tipo:'SNL',q:'atencion',off:900000},
+    {name:'Carlos Vega',rut:'11.111.111-1',tipo:'IEP',q:'procedimientos',off:600000},
+    {name:'Isabel Torres',rut:'8.888.888-8',tipo:'RM',q:'botiquin',off:540000},
+  ];
+  demos.forEach(d=>{const pid='p'+Date.now()+Math.random();S.patients[pid]={id:pid,name:d.name,rut:d.rut,tipo:d.tipo,queue:d.q,note:'',enteredAt:now()-d.off,queueEnteredAt:now()-d.off};});
+  showScreen('screen-login');
+}
+
+// ── SYNC (Firebase Realtime — push/pull instantáneo) ──────────────────────────
+function startSync(){
+  if(S.demo||!S.db){renderAll();return;}
+  stopSync();
+  const pRef=S.db.ref('patients');
+  const aRef=S.db.ref('attending');
+  const cRef=S.db.ref('completed');
+  const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderSync();});
+  const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderSync();});
+  const onC=cRef.on('value',snap=>{S.completed=snap.val()?Object.values(snap.val()):[];});
+  S.listeners=[{ref:pRef,ev:'value',fn:onP},{ref:aRef,ev:'value',fn:onA},{ref:cRef,ev:'value',fn:onC}];
+}
+function stopSync(){
+  if(S.listeners)S.listeners.forEach(l=>{try{l.ref.off(l.ev,l.fn);}catch(e){}});
+  S.listeners=[];
+}
+
+// DB helpers
+async function dbSet(path,data){
+  if(S.demo){applyLocal(path,data);renderSync();return;}
+  await S.db.ref(path).set(data);
+}
+async function dbRemove(path){
+  if(S.demo){removeLocal(path);renderSync();return;}
+  await S.db.ref(path).remove();
+}
+async function dbPush(path,data){
+  if(S.demo){if(!S.completed)S.completed=[];S.completed.push(data);return;}
+  await S.db.ref(path).push(data);
+}
+async function syncUp(){}  // no-op: Firebase listeners handle everything
+function applyLocal(path,data){const p=path.split('/');if(p[0]==='patients')S.patients[p[1]]=data;else if(p[0]==='attending')S.attending[p[1]]=data;}
+function removeLocal(path){const p=path.split('/');if(p[0]==='patients')delete S.patients[p[1]];else if(p[0]==='attending')delete S.attending[p[1]];}
+
+// ── SCREENS ───────────────────────────────────────────────────────────────────
+let showAllQueues = false;
+
+function showTab(tab){
+  const tf=$('tab-filas'), ts=$('tab-stats'), tp=$('tab-proced');
+  const bf=$('btn-filas'), bs=$('btn-stats'), bp=$('btn-proced');
+  if(tf) tf.style.display=tab==='filas'?'block':'none';
+  if(ts) ts.style.display=tab==='stats'?'block':'none';
+  if(tp) tp.style.display=tab==='proced'?'block':'none';
+  if(bf) bf.className='tab-btn'+(tab==='filas'?' on':'');
+  if(bs) bs.className='tab-btn'+(tab==='stats'?' on':'');
+  if(bp) bp.className='tab-btn'+(tab==='proced'?' on':'');
+  if(tab==='filas'){ renderAdd(); renderAlerts(); renderQueues(); renderAttending(); }
+  if(tab==='stats') renderStats();
+  if(tab==='proced') renderProcedTab();
+}
+
+function toggleFilas(){
+  const currentTab = $('tab-filas').style.display !== 'none';
+  if(!currentTab){
+    // Estaba en stats, volver a filas
+    showTab('filas');
+    return;
+  }
+  // Estaba en filas, alternar entre mis filas y todas
+  showAllQueues = !showAllQueues;
+  const btn=$('btn-filas');
+  if(btn) btn.textContent = showAllQueues ? '🏥 Mis filas' : '🏥 Filas';
+  renderQueues();
+}
+
+// ── NOMBRES RECIENTES ─────────────────────────────────────────────────────────
+function getRecentNames(){return JSON.parse(localStorage.getItem('cpa_recent_names')||'[]');}
+function saveRecentName(name){
+  if(!name.trim())return;
+  let names=getRecentNames().filter(n=>n.toLowerCase()!==name.toLowerCase());
+  names.unshift(name.trim());
+  names=names.slice(0,3);
+  localStorage.setItem('cpa_recent_names',JSON.stringify(names));
+}
+
+function showRecentNames(){
+  const names=getRecentNames();
+  const cur=($('login-nombre')||{}).value?.trim()||'';
+  const filtered=cur?names.filter(n=>n.toLowerCase().includes(cur.toLowerCase())):names;
+  renderRecentNames(filtered);
+}
+
+function filterRecentNames(val){
+  const names=getRecentNames();
+  const filtered=val?names.filter(n=>n.toLowerCase().includes(val.toLowerCase())):names;
+  renderRecentNames(filtered);
+}
+
+function renderRecentNames(names){
+  const box=$('recent-names');if(!box)return;
+  if(!names.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=names.map(n=>`
+    <div onclick="selectRecentName('${n}')"
+      style="padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s"
+      onmouseover="this.style.background='#F5F5F7'" onmouseout="this.style.background='#fff'">
+      <span style="color:var(--muted);font-size:11px;margin-right:6px">↺</span>${n}
+    </div>`).join('');
+}
+
+function selectRecentName(name){
+  const inp=$('login-nombre');
+  if(inp){inp.value=name;}
+  hideRecentNames();
+}
+
+function hideRecentNames(){
+  const box=$('recent-names');
+  if(box)box.style.display='none';
+}
+
+function loginConNombre(id,role){
+  const nombre=($('login-nombre')||{}).value?.trim()||'';
+  const err=$('login-nombre-err');
+  if(!nombre){
+    if(err)err.style.display='block';
+    $('login-nombre')?.focus();
+    return;
+  }
+  if(err)err.style.display='none';
+  saveRecentName(nombre);
+  login(id, nombre, role);
+}
+
+// Al volver al login, precargar último nombre usado
+function precargarNombre(){
+  const names=getRecentNames();
+  const inp=$('login-nombre');
+  if(inp&&names.length) inp.value=names[0];
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function login(id,name,role){
+  S.user={id,name,role};
+  if(role==='monitor'){showScreen('screen-monitor');startMonitor();return;}
+  const [bg,fg]=AVCOL[role]||['#F3F4F6','#374151'];
+  const av=$('tb-av');av.textContent=initials(name);av.style.background=bg;av.style.color=fg;
+  $('tb-name').textContent=name;$('tb-role').textContent=ROLES[role]||role;
+  if(S.demo){$('live-pill').className='live-pill demo';$('live-txt').textContent='DEMO';}
+  showAllQueues = false;
+  showScreen('screen-main');showTab('filas');
+  // Mostrar tab procedimientos solo para roles que lo usan
+  const bp=$('btn-proced');
+  if(bp) bp.style.display=['admin','enfermero','tens','medico'].includes(role)?'block':'none';
+  startSync();startTick();renderAll();
+}
+
+function logout(){
+  stopSync();stopTick();clearInterval(S.monInt);
+  S.user=null;
+  if(!S.demo){S.patients={};S.attending={};S.completed=[];}
+  showScreen('screen-login');
+  setTimeout(precargarNombre,50);
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+async function addPatient(){
+  const name=($('inp-name')||{}).value?.trim()||'';
+  const rut=($('inp-rut')||{}).value?.trim()||'';
+  const tipo=($('inp-tipo')||{}).value||'';
+  let note=($('inp-note')||{}).value?.trim()||'';
+  const queue=($('sel-queue')||{}).value||'admision';
+  if(!name){toast('Ingresa el nombre del paciente');return;}
+  // Capturar ítems SE si aplica
+  if(tipo==='SE'){
+    const items=['se-bateria','se-altura','se-confinados']
+      .filter(id=>$(id)&&$(id).checked)
+      .map(id=>$(id).value);
+    if(items.length) note=(note?note+' — ':'')+'Evaluación: '+items.join(', ');
+  }
+  const pid='p'+Date.now()+Math.floor(Math.random()*9999);
+  const patient={id:pid,name,rut,tipo,note,queue,enteredAt:now(),queueEnteredAt:now()};
+  S.patients[pid]=patient;
+  renderSync();
+  await dbSet('patients/'+pid,patient);
+  if($('inp-name'))$('inp-name').value='';
+  if($('inp-rut'))$('inp-rut').value='';
+  if($('inp-note'))$('inp-note').value='';
+  if($('inp-tipo')){$('inp-tipo').value='';onTipoChange('');}
+  toast('Paciente registrado ✓');
+}
+
+async function takePatient(pid){
+  const p=S.patients[pid];if(!p)return;
+  const att={...p,attBy:S.user.name,attRole:S.user.role,attStart:now(),waitMs:now()-p.queueEnteredAt};
+  delete S.patients[pid];
+  S.attending[pid]=att;
+  renderSync();
+  await dbRemove('patients/'+pid);
+  await dbSet('attending/'+pid,att);
+  toast('Atención iniciada ✓');
+}
+
+async function devolverAFila(pid){
+  const p=S.attending[pid];if(!p)return;
+  // Devolver a la misma fila de donde vino
+  const paciente={id:pid,name:p.name,rut:p.rut||'',tipo:p.tipo||'',
+    queue:p.queue,note:p.note||'',enteredAt:p.enteredAt,queueEnteredAt:p.queueEnteredAt||now()};
+  delete S.attending[pid];
+  S.patients[pid]=paciente;
+  renderSync();
+  await dbRemove('attending/'+pid);
+  await dbSet('patients/'+pid,paciente);
+  toast('Paciente devuelto a la fila ✓');
+}
+
+function openModalDerivarEgreso(pid){
+  const p=S.attending[pid];if(!p)return;
+  S.modalPid=pid;
+  $('modal-pinfo').textContent=p.name+(p.rut?' · '+p.rut:'')+(p.tipo?' · '+p.tipo:'');
+  $('modal-note').value='';
+  onModalDestChange(''); // reset submenu
+  const destinos=['atencion','procedimientos','botiquin'];
+  $('modal-dest').innerHTML=QUEUES
+    .filter(q=>destinos.includes(q.id))
+    .map(q=>`<option value="${q.id}">${q.name}</option>`)
+    .join('');
+  // Actualizar submenu según primera opción
+  onModalDestChange($('modal-dest').value);
+  $('modal-derivar').classList.add('open');
+  setTimeout(()=>$('modal-note').focus(),100);
+}
+
+function openModalDerivar(pid){
+  const p=S.attending[pid];if(!p)return;
+  S.modalPid=pid;
+  $('modal-pinfo').textContent=p.name+(p.rut?' · '+p.rut:'')+(p.tipo?' · '+p.tipo:'');
+  $('modal-note').value='';
+  onModalDestChange(''); // reset submenu
+  const canSelf=['procedimientos','botiquin'];
+  const opciones=QUEUES
+    .filter(q=>q.id!=='egreso'&&(q.id!==p.queue||canSelf.includes(p.queue)))
+    .map(q=>`<option value="${q.id}">${q.name}${q.id===p.queue?' (nueva atención)':''}</option>`)
+    .join('');
+  $('modal-dest').innerHTML=opciones;
+  // Actualizar submenu según primera opción seleccionada
+  onModalDestChange($('modal-dest').value);
+  $('modal-derivar').classList.add('open');
+  setTimeout(()=>$('modal-note').focus(),100);
+}
+
+function closeModal(tipo){
+  $('modal-'+tipo).classList.remove('open');
+  if(tipo==='derivar')S.modalPid=null;
+  if(tipo==='egreso'){S.egresoMid=null;S.egresoNote='';}
+}
+
+function onModalDestChange(val){
+  const sub=$('proc-submenu');
+  if(!sub)return;
+  if(val==='procedimientos'){
+    sub.style.display='block';
+  } else {
+    sub.style.display='none';
+    // limpiar checkboxes
+    ['proc-ev','proc-sl','proc-inm','proc-cur','proc-cnt'].forEach(id=>{
+      const el=$(id);if(el)el.checked=false;
+    });
+    const evInd=$('ev-indicacion');
+    if(evInd)evInd.style.display='none';
+    const evText=$('proc-ev-text');
+    if(evText)evText.value='';
+  }
+}
+
+function toggleProc(id){
+  const el=$(id);if(!el)return;
+  el.checked=!el.checked;
+  if(id==='proc-ev')checkProcEv();
+}
+
+function checkProcEv(){
+  const el=$('proc-ev');
+  const ind=$('ev-indicacion');
+  if(!el||!ind)return;
+  ind.style.display=el.checked?'block':'none';
+  if(!el.checked&&$('proc-ev-text'))$('proc-ev-text').value='';
+}
+
+function buildProcNote(){
+  const checks=[
+    {id:'proc-ev',   label:'Endovenoso'},
+    {id:'proc-sl',   label:'Sublingual'},
+    {id:'proc-inm',  label:'Inmovilización'},
+    {id:'proc-cur',  label:'Curación'},
+    {id:'proc-cnt',  label:'Contención no Ley'},
+  ];
+  const selected=checks.filter(c=>$(c.id)&&$(c.id).checked).map(c=>{
+    if(c.id==='proc-ev'){
+      const ind=($('proc-ev-text')||{}).value?.trim()||'';
+      return ind?`Endovenoso: ${ind}`:'Endovenoso';
+    }
+    return c.label;
+  });
+  return selected.length?'Procedimientos: '+selected.join(' | '):'';
+}
+
+async function confirmDerivacion(){
+  const pid=S.modalPid;if(!pid)return;
+  const p=S.attending[pid];if(!p)return;
+  const dest=$('modal-dest').value;
+  // Construir nota combinando procedimientos seleccionados + nota libre
+  let note='';
+  if(dest==='procedimientos'){
+    const procNote=buildProcNote();
+    const freeNote=($('modal-note')||{}).value?.trim()||'';
+    note=[procNote,freeNote].filter(Boolean).join(' — ');
+  } else {
+    note=($('modal-note')||{}).value?.trim()||'';
+  }
+  $('modal-derivar').classList.remove('open');
+  // Reset proc submenu
+  onModalDestChange('');
+  await sendPatient(pid,p,dest,note);
+}
+
+function openModalEgreso(p,note){
+  if(!p)return;
+  // Encontrar el pid en S.attending
+  const pid=Object.keys(S.attending).find(k=>S.attending[k].id===p.id)||
+            Object.keys(S.attending).find(k=>S.attending[k]===p);
+  if(pid)S.egresoMid=pid;
+  $('egreso-pinfo').textContent=p.name+(p.rut?' · '+p.rut:'');
+  ['chk1','chk2','chk3'].forEach(id=>{$(id).checked=false;$(id+'-box').classList.remove('checked');});
+  $('chk-warn').style.display='none';$('egreso-note').value=note||'';
+  $('modal-egreso').classList.add('open');
+}
+
+function toggleChk(id){const el=$(id);el.checked=!el.checked;syncChk(id);}
+function syncChk(id){$(id+'-box').classList.toggle('checked',$(id).checked);}
+
+async function confirmarEgreso(){
+  if(!$('chk1').checked||!$('chk2').checked||!$('chk3').checked){$('chk-warn').style.display='block';return;}
+  const pid=S.egresoMid;const p=S.attending[pid];if(!p)return;
+  const note=$('egreso-note').value.trim()||S.egresoNote;
+  $('modal-egreso').classList.remove('open');
+  window.open('https://prod.salud.achs.cl/web-firmadigital/','_blank');
+  await sendPatient(pid,p,'alta',note);
+}
+
+async function sendPatient(pid,p,destId,note){
+  const attMs=now()-p.attStart;
+  const rec={id:pid,name:p.name,rut:p.rut||'',tipo:p.tipo||'',queue:p.queue,
+    waitMs:p.waitMs||0,attMs,enteredAt:p.enteredAt,attBy:p.attBy||'',
+    attRole:p.attRole||'',note:note||'',destQueue:destId,
+    doneAt:destId==='alta'?now():null,ts:now()};
+  // Actualizar estado local inmediatamente para que la UI responda al instante
+  delete S.attending[pid];
+  if(!S.completed)S.completed=[];
+  S.completed.push(rec);
+  if(destId!=='alta'){
+    S.patients[pid]={id:pid,name:p.name,rut:p.rut||'',tipo:p.tipo||'',
+      queue:destId,note:note||'',enteredAt:p.enteredAt,queueEnteredAt:now()};
+  }
+  renderSync();
+  // Luego escribir en Firebase
+  await dbPush('completed',rec);
+  await dbRemove('attending/'+pid);
+  if(destId!=='alta'){
+    await dbSet('patients/'+pid,{id:pid,name:p.name,rut:p.rut||'',tipo:p.tipo||'',
+      queue:destId,note:note||'',enteredAt:p.enteredAt,queueEnteredAt:now()});
+    toast('Derivado a '+qInfo(destId).name+' ✓');
+  } else {
+    toast('🎉 Alta registrada con éxito');
+    launchConfetti();
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderAll(){
+  if(!S.user||!$('screen-main').classList.contains('active'))return;
+  renderAdd();renderAlerts();renderQueues();renderAttending();
+}
+
+// Sync sin tocar el formulario de registro (evita borrar lo que se está escribiendo)
+function renderSync(){
+  if(!S.user||!$('screen-main').classList.contains('active'))return;
+  renderAlerts();renderQueues();renderAttending();
+}
+
+function renderAdd(){
+  const z=$('add-zone');
+  if(!['admin','admision'].includes(S.user?.role)){z.innerHTML='';return;}
+  z.innerHTML=`<div class="add-box">
+    <div class="box-title">Registrar nuevo paciente</div>
+    <div class="add-grid">
+      <input id="inp-name" class="full" placeholder="Nombre completo" onkeydown="if(event.key==='Enter')$('inp-rut').focus()"/>
+      <input id="inp-rut" placeholder="RUT (ej: 12345678-9)" oninput="onRut(this)"/>
+      <select id="inp-tipo" onchange="onTipoChange(this.value)">${TIPOS.map(t=>`<option value="${t.val}">${t.label}</option>`).join('')}</select>
+      <select id="sel-queue">${QUEUES.map(q=>`<option value="${q.id}">${q.name}</option>`).join('')}</select>
+      <div id="se-submenu-zone" class="full"></div>
+      <textarea id="inp-note" class="full" placeholder="Nota inicial (motivo de consulta...)" style="min-height:44px;resize:none"></textarea>
+    </div>
+    <button class="add-btn" onclick="addPatient()">+ Registrar paciente</button>
+  </div>`;
+}
+
+function onTipoChange(val){
+  const zone=$('se-submenu-zone');
+  if(!zone)return;
+  if(val==='SE'){
+    zone.innerHTML=`<div class="se-submenu">
+      <div class="se-label">Tipo de evaluación laboral</div>
+      <div class="se-checks">
+        <div class="se-check"><input type="checkbox" id="se-bateria" value="Batería básica"/><label for="se-bateria">Batería básica</label></div>
+        <div class="se-check"><input type="checkbox" id="se-altura" value="Altura física"/><label for="se-altura">Altura física</label></div>
+        <div class="se-check"><input type="checkbox" id="se-confinados" value="Espacios confinados"/><label for="se-confinados">Espacios confinados</label></div>
+      </div>
+    </div>`;
+  } else {
+    zone.innerHTML='';
+  }
+}
+
+function renderAlerts(){
+  const pts=Object.values(S.patients);
+  const over=pts.filter(p=>level(now()-p.queueEnteredAt,waitLimit(p.tipo))==='over');
+  const box=$('alert-box');if(!box)return;
+  if(!over.length){box.className='alert-summary hidden';return;}
+  box.className='alert-summary';
+  box.innerHTML=`<div class="as-icon">🚨</div><div>
+    <div class="as-text">${over.length} paciente${over.length>1?'s':''} con tiempo de espera superado</div>
+    <div class="as-sub">${over.map(p=>`${p.name} (${p.tipo||'—'} · ${fmtMin(now()-p.queueEnteredAt)}min)`).join(' · ')}</div>
+  </div>`;
+}
+
+function renderQueues(){
+  const pts=Object.values(S.patients);
+  const isAdmin = S.user.role==='admin';
+  const visibleQueues = (isAdmin || showAllQueues)
+    ? QUEUES
+    : QUEUES.filter(q=>q.roles.includes(S.user.role));
+  const canManageAll = showAllQueues && !isAdmin; // en modo "ver todas" no puede gestionar ajenas
+
+  $('queues-zone').innerHTML=visibleQueues.map(q=>{
+    const qpts=pts.filter(p=>p.queue===q.id).sort((a,b)=>a.queueEnteredAt-b.queueEnteredAt);
+    const can=canManage(q.id);
+    return `<div class="queue-section">
+      <div class="q-head" style="background:${q.bg};border-color:${q.bd};color:${q.tc}">
+        <div class="qh-l"><div class="qh-dot" style="background:${q.color}"></div>
+          <div><div class="qh-name">${q.name}</div><div class="qh-sub">${qpts.length} paciente${qpts.length!==1?'s':''} en espera</div></div>
+        </div>
+        <div class="qh-badge">${qpts.length}</div>
+      </div>
+      <div class="q-body">
+        ${qpts.length===0?'<div class="q-empty">Sin pacientes en espera</div>':''}
+        ${qpts.map((p,i)=>{
+          const wait=now()-p.queueEnteredAt;
+          const lim=waitLimit(p.tipo);
+          const lv=level(wait,lim);
+          const pct=Math.min(100,Math.round(wait/lim*100));
+          const limMin=Math.round(lim/60000);
+          const icons={ok:'',warn:'⚠ ',over:'🚨 '};
+          return `<div class="p-row${lv!=='ok'?' alert-'+lv:''}">
+            <div class="p-left">
+              <div class="p-num" style="color:${lv==='over'?'#DC2626':lv==='warn'?'#D97706':q.color}">${i+1}</div>
+              <div style="min-width:0;flex:1">
+                <div class="p-name">${p.name}
+                  ${p.tipo?`<span class="time-limit-badge ${lv}">${icons[lv]}${p.tipo} ≤${limMin}m</span>`:''}
+                </div>
+                ${p.rut?`<div class="p-rut">${p.rut}</div>`:''}
+                ${p.tipo?`<div class="p-tipo-full">${tipoLabel(p.tipo)}</div>`:''}
+                <div class="wait-${lv}">⏱ <span id="w${p.id}">${fmt(wait)}</span>${lv==='over'?' — TIEMPO SUPERADO':lv==='warn'?' — Próximo al límite':''}</div>
+                <div class="time-bar-wrap"><div class="time-bar-fill ${lv}" style="width:${pct}%"></div></div>
+                ${p.note?`<div class="p-note">📋 ${p.note}</div>`:''}
+              </div>
+            </div>
+            ${can?`<button class="take-btn" onclick="takePatient('${p.id}')">Atender</button>`:`<span class="other-tag">Otra área</span>`}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAttending(){
+  const att=Object.values(S.attending).sort((a,b)=>a.attStart-b.attStart);
+  const mine=att.filter(p=>S.user.role==='admin'||p.attRole===S.user.role);
+  const z=$('att-zone');
+  if(!mine.length){z.innerHTML='<div class="q-empty" style="background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius)">No tienes pacientes en atención ahora</div>';return;}
+  z.innerHTML=mine.map(p=>{
+    const q=qInfo(p.queue);
+    const attMs=now()-p.attStart;
+    const alim=attLimit(p.tipo||'');
+    const alv=level(attMs,alim);
+    const apct=alim?Math.min(100,Math.round(attMs/alim*100)):null;
+    const alimMin=alim?Math.round(alim/60000):null;
+    const banner=alv==='over'?`<div class="att-alert-banner over">🚨 Tiempo de consulta superado (meta: ${alimMin}min)</div>`
+                 :alv==='warn'?`<div class="att-alert-banner warn">⚠ Próximo al límite de consulta (meta: ${alimMin}min)</div>`:'';
+    const showAchs=p.queue==='admision'&&['admin','admision'].includes(S.user.role);
+
+    // Barra de progreso — usa límite de atención si existe, si no usa 60min como referencia visual
+    const barLimit = alim || (20*60000);
+    const barPct = Math.min(100, Math.round(attMs/barLimit*100));
+    const barLv = alv !== 'ok' ? alv : barPct>=80?'warn':'ok';
+    const progressBar = `<div class="att-progress-wrap">
+      <div class="att-progress-label">
+        <span class="att-progress-elapsed" id="t${p.id}">${fmt(attMs)}</span>
+        ${alimMin ? `<span class="att-progress-limit">Meta: ${alimMin}min</span>` : '<span class="att-progress-limit">Tiempo en atención</span>'}
+      </div>
+      <div class="att-progress-bar">
+        <div class="att-progress-fill ${barLv}" id="bar${p.id}" style="width:${barPct}%"></div>
+      </div>
+    </div>`;
+    return `<div class="att-card${alv!=='ok'?' att-'+alv:''}" style="border-left-color:${alv==='over'?'#DC2626':alv==='warn'?'#D97706':q.color}">
+      <div class="att-name">${p.name}</div>
+      ${p.rut?`<div class="att-rut">${p.rut}</div>`:''}
+      ${p.tipo?`<div class="att-sigla">${tipoLabel(p.tipo)}</div>`:''}
+      <div class="att-from">Desde: ${q.name} · Espera previa: ${fmtMin(p.waitMs)}min</div>
+      ${banner}
+      ${progressBar}
+      ${p.note?`<div class="p-note-display">📋 ${p.note}</div>`:''}
+      ${showAchs?`<button class="achs-btn" onclick="window.open('https://prod.salud.achs.cl/web-admision/','_blank')">🔗 Abrir sistema ACHS Admisión</button>`:''}
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="devolverAFila('${p.id}')"
+          style="flex:1;padding:9px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:9px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font);color:#DC2626;transition:all .2s"
+          onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
+          ← Devolver a fila
+        </button>
+        ${p.queue==='egreso'
+          ? `<div style="display:flex;flex-direction:column;gap:6px;flex:2">
+              <button onclick="openModalEgreso(S.attending['${p.id}'])"
+                style="width:100%;padding:9px;background:#059669;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);transition:opacity .2s"
+                onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+                ✓ Iniciar cierre de atención
+              </button>
+              <button onclick="openModalDerivarEgreso('${p.id}')"
+                style="width:100%;padding:7px;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:9px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font);color:#1E40AF;transition:all .2s"
+                onmouseover="this.style.background='#DBEAFE'" onmouseout="this.style.background='#EFF6FF'">
+                ↩ Derivar a médico / procedimientos / botiquín
+              </button>
+            </div>`
+          : `<button class="derivar-btn" style="flex:2" onclick="openModalDerivar('${p.id}')">Derivar →</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MONITOR ───────────────────────────────────────────────────────────────────
+function startMonitor(){
+  stopSync();
+  if(!S.demo&&S.db){
+    const pRef=S.db.ref('patients');
+    const aRef=S.db.ref('attending');
+    const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderMonitor();});
+    const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderMonitor();});
+    S.listeners=[{ref:pRef,ev:'value',fn:onP},{ref:aRef,ev:'value',fn:onA}];
+  }
+  clearInterval(S.monInt);
+  S.monInt=setInterval(()=>{
+    const d=new Date();
+    $('mon-clock').textContent=d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    $('mon-date').textContent=d.toLocaleDateString('es-CL',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    renderMonitor();
+  },1000);
+}
+
+function renderMonitor(){
+  const pts=Object.values(S.patients);
+  const att=Object.values(S.attending);
+  $('mon-grid').innerHTML=QUEUES.map(q=>{
+    const qpts=pts.filter(p=>p.queue===q.id).sort((a,b)=>a.queueEnteredAt-b.queueEnteredAt);
+    const qatt=att.filter(p=>p.queue===q.id);
+    return `<div class="mon-q">
+      <div class="mon-qh" style="background:${q.bg};border-bottom:2px solid ${q.bd}">
+        <div class="mon-qname" style="color:${q.tc}">${q.name}</div>
+        <div class="mon-qcount" style="color:${q.color}">${qpts.length}</div>
+      </div>
+      ${qatt.map(p=>`<div class="mon-att"><span class="mon-att-name">${p.name}</span><span class="mon-tag-att" style="background:${q.color}">En atención</span></div>`).join('')}
+      ${!qpts.length&&!qatt.length?'<div class="mon-empty">Sin espera</div>':''}
+      ${qpts.map((p,i)=>`<div class="mon-pr">
+        <div class="mon-pnum" style="color:${q.color}">${i+1}</div>
+        <div class="mon-pinfo">
+          <div class="mon-pname">${p.name}</div>
+          ${p.rut?`<div class="mon-prut">${p.rut}</div>`:''}
+          ${p.tipo?`<div class="mon-psigla">${p.tipo}</div>`:''}
+          ${p.note?`<div class="mon-pnote">📋 ${p.note}</div>`:''}
+        </div>
+        <div class="mon-pwait">${fmtMin(now()-p.queueEnteredAt)}m</div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function renderStats(){
+  const all=S.completed||[];
+  const ids=new Set(all.map(r=>r.id));
+  const done=all.filter(r=>r.doneAt);
+  const avgW=all.length?Math.round(all.reduce((s,r)=>s+(r.waitMs||0),0)/all.length/60000):0;
+  const avgA=all.length?Math.round(all.reduce((s,r)=>s+(r.attMs||0),0)/all.length/60000):0;
+  $('stats-sum').innerHTML=`
+    <div class="stat-card"><div class="stat-lbl">Pacientes hoy</div><div class="stat-val">${ids.size}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Altas</div><div class="stat-val">${done.length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Espera prom.</div><div class="stat-val">${avgW}m</div></div>
+    <div class="stat-card"><div class="stat-lbl">Atención prom.</div><div class="stat-val">${avgA}m</div></div>
+  `;
+  const byQ={};QUEUES.forEach(q=>{byQ[q.id]={w:[],a:[]};});
+  all.forEach(r=>{if(byQ[r.queue]){if(r.waitMs)byQ[r.queue].w.push(r.waitMs/60000);if(r.attMs)byQ[r.queue].a.push(r.attMs/60000);}});
+  const avg=arr=>arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):0;
+  const maxW=Math.max(1,...QUEUES.map(q=>avg(byQ[q.id].w)));
+  const maxA=Math.max(1,...QUEUES.map(q=>avg(byQ[q.id].a)));
+  const bar=(q,v,max)=>{const w=Math.round(v/max*100);return`<div class="b-row"><div class="b-lbl">${q.name}</div><div class="b-wrap"><div class="b-fill" style="width:${w}%;background:${q.color}">${w>18?v+'m':''}</div></div><div class="b-val">${v}m</div></div>`;};
+  $('chart-w').innerHTML=QUEUES.map(q=>bar(q,avg(byQ[q.id].w),maxW)).join('');
+  $('chart-a').innerHTML=QUEUES.map(q=>bar(q,avg(byQ[q.id].a),maxA)).join('');
+  const rows=all.filter((r,i,a)=>a.findIndex(x=>x.id===r.id&&x.queue===r.queue)===i).sort((a,b)=>b.ts-a.ts);
+  $('hist-wrap').innerHTML=`<table>
+    <thead><tr><th>Paciente</th><th>RUT</th><th>Tipo</th><th>Etapa</th><th>Nota</th><th>Espera</th><th>Atención</th><th>Estado</th></tr></thead>
+    <tbody>${!rows.length?'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Sin registros aún.</td></tr>'
+      :rows.map(r=>{const q=qInfo(r.queue);return`<tr>
+        <td style="font-weight:700">${r.name}</td>
+        <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${r.rut||'—'}</td>
+        <td><span class="badge" style="background:#F3F4F6;color:#374151">${r.tipo||'—'}</span></td>
+        <td><span class="badge" style="background:${q.bg};color:${q.tc}">${q.name}</span></td>
+        <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.note||'—'}</td>
+        <td><span class="badge" style="background:#FFFBEB;color:#92400E">${fmtMin(r.waitMs||0)}m</span></td>
+        <td><span class="badge" style="background:#ECFDF5;color:#065F46">${fmtMin(r.attMs||0)}m</span></td>
+        <td><span class="badge" style="background:${r.doneAt?'#F5F3FF':'#F9FAFB'};color:${r.doneAt?'#5B21B6':'#374151'}">${r.doneAt?'Alta':'En proceso'}</span></td>
+      </tr>`;}).join('')}</tbody></table>`;
+}
+
+// ── TICK ──────────────────────────────────────────────────────────────────────
+function startTick(){
+  stopTick();let c=0;
+  S.tickInt=setInterval(()=>{
+    // Update wait timers in queue
+    Object.values(S.patients).forEach(p=>{
+      const e=document.getElementById('w'+p.id);
+      if(e)e.textContent=fmt(now()-p.queueEnteredAt);
+    });
+    // Update att timers and progress bars
+    Object.values(S.attending).forEach(p=>{
+      const attMs=now()-p.attStart;
+      const e=document.getElementById('t'+p.id);
+      if(e)e.textContent=fmt(attMs);
+      const bar=document.getElementById('bar'+p.id);
+      if(bar){
+        const alim=attLimit(p.tipo||'');
+        const barLimit=alim||(20*60000);
+        const pct=Math.min(100,Math.round(attMs/barLimit*100));
+        const alv=level(attMs,alim);
+        const barLv=alv!=='ok'?alv:pct>=80?'warn':'ok';
+        bar.style.width=pct+'%';
+        bar.className='att-progress-fill '+barLv;
+      }
+    });
+    if(++c%30===0)renderSync();else renderAlerts();
+  },1000);
+}
+function stopTick(){if(S.tickInt)clearInterval(S.tickInt);}
+
+// ── EXCEL ─────────────────────────────────────────────────────────────────────
+function exportExcel(){
+  const all=S.completed||[];
+  const rows=all.filter((r,i,a)=>a.findIndex(x=>x.id===r.id&&x.queue===r.queue)===i).sort((a,b)=>b.ts-a.ts);
+  const wb=new WB();
+  const h1=[['Paciente','RUT','Tipo','Etapa','Nota','Espera (min)','Atención (min)','Atendido por','Rol','Estado','Fecha']];
+  rows.forEach(r=>h1.push([r.name,r.rut||'',tipoLabel(r.tipo||''),qInfo(r.queue).name,r.note||'',fmtMin(r.waitMs||0),fmtMin(r.attMs||0),r.attBy||'',ROLES[r.attRole]||'',r.doneAt?'Alta':'En proceso',new Date(r.enteredAt||r.ts).toLocaleString('es-CL')]));
+  wb.add('Historial',h1,[22,14,28,20,30,14,16,20,14,14,20]);
+  const byQ={};QUEUES.forEach(q=>{byQ[q.id]={w:[],a:[]};});
+  all.forEach(r=>{if(byQ[r.queue]){if(r.waitMs)byQ[r.queue].w.push(r.waitMs/60000);if(r.attMs)byQ[r.queue].a.push(r.attMs/60000);}});
+  const avg=arr=>arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):0;
+  const h2=[['Etapa','Atenciones','Espera prom.(min)','Atención prom.(min)']];
+  QUEUES.forEach(q=>h2.push([q.name,byQ[q.id].w.length,avg(byQ[q.id].w),avg(byQ[q.id].a)]));
+  h2.push(['','','','']);h2.push(['Total pacientes',new Set(all.map(r=>r.id)).size,'','']);h2.push(['Altas',all.filter(r=>r.doneAt).length,'','']);
+  wb.add('Resumen',h2,[26,16,22,22]);
+  wb.download('CentroMedico_'+new Date().toLocaleDateString('es-CL').replace(/\//g,'-')+'.xlsx');
+  toast('Descargando Excel...');
+}
+
+class WB{
+  constructor(){this.sheets=[];}
+  add(n,r,c=[]){this.sheets.push({n,r,c});}
+  download(fn){const b=new Blob([this._build()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
+  _e(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  _c(n){let s='';n++;while(n>0){s=String.fromCharCode(65+(n-1)%26)+s;n=Math.floor((n-1)/26);}return s;}
+  _sx(rows,cols){let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';if(cols.length){x+='<cols>';cols.forEach((w,i)=>{x+=`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`;});x+='</cols>';}x+='<sheetData>';rows.forEach((row,ri)=>{x+=`<row r="${ri+1}">`;row.forEach((cell,ci)=>{const ref=this._c(ci)+(ri+1);if(cell===null||cell===undefined||cell===''){x+=`<c r="${ref}"/>`;return;}if(typeof cell==='number'){x+=`<c r="${ref}"><v>${cell}</v></c>`;}else{x+=`<c r="${ref}" t="inlineStr"><is><t>${this._e(String(cell))}</t></is></c>`;}});x+='</row>';});x+='</sheetData></worksheet>';return x;}
+  _build(){const enc=new TextEncoder(),files={};let ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>';this.sheets.forEach((_,i)=>{ct+=`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`;});ct+='</Types>';files['[Content_Types].xml']=enc.encode(ct);files['_rels/.rels']=enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');let wr='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';this.sheets.forEach((_,i)=>{wr+=`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`;});wr+='</Relationships>';files['xl/_rels/workbook.xml.rels']=enc.encode(wr);let wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>';this.sheets.forEach((s,i)=>{wb+=`<sheet name="${this._e(s.n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`;});wb+='</sheets></workbook>';files['xl/workbook.xml']=enc.encode(wb);this.sheets.forEach((s,i)=>{files[`xl/worksheets/sheet${i+1}.xml`]=enc.encode(this._sx(s.r,s.c));});return this._zip(files);}
+  _zip(files){const u32=(n,b,o)=>{b[o]=n&0xFF;b[o+1]=(n>>8)&0xFF;b[o+2]=(n>>16)&0xFF;b[o+3]=(n>>24)&0xFF;},u16=(n,b,o)=>{b[o]=n&0xFF;b[o+1]=(n>>8)&0xFF;},crc=d=>{let c=0xFFFFFFFF;for(let i=0;i<d.length;i++){c^=d[i];for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;}return(c^0xFFFFFFFF)>>>0;},ne=new TextEncoder(),entries=[],parts=[];let off=0;for(const[p,d]of Object.entries(files)){const n=ne.encode(p),cr=crc(d),h=new Uint8Array(30+n.length);u32(0x04034B50,h,0);u16(20,h,4);u16(0,h,6);u16(0,h,8);u16(0,h,10);u16(0,h,12);u32(cr,h,14);u32(d.length,h,18);u32(d.length,h,22);u16(n.length,h,26);u16(0,h,28);h.set(n,30);entries.push({n,d,cr,off,h});parts.push(h,d);off+=h.length+d.length;}const cdo=off,cdp=entries.map(e=>{const cd=new Uint8Array(46+e.n.length);u32(0x02014B50,cd,0);u16(20,cd,4);u16(20,cd,6);u16(0,cd,8);u16(0,cd,10);u16(0,cd,12);u16(0,cd,14);u32(e.cr,cd,16);u32(e.d.length,cd,20);u32(e.d.length,cd,24);u16(e.n.length,cd,28);u16(0,cd,30);u16(0,cd,32);u16(0,cd,34);u16(0,cd,36);u32(0,cd,38);u32(e.off,cd,42);cd.set(e.n,46);return cd;});const cds=cdp.reduce((s,p)=>s+p.length,0),eocd=new Uint8Array(22);u32(0x06054B50,eocd,0);u16(0,eocd,4);u16(0,eocd,6);u16(entries.length,eocd,8);u16(entries.length,eocd,10);u32(cds,eocd,12);u32(cdo,eocd,16);u16(0,eocd,20);const all=[...parts,...cdp,eocd],tot=all.reduce((s,p)=>s+p.length,0),out=new Uint8Array(tot);let pos=0;all.forEach(p=>{out.set(p,pos);pos+=p.length;});return out;}
+}
+
+// ── TÉRMINOS DE USO ───────────────────────────────────────────────────────────
+function onTermsRut(el){
+  let r=el.value.replace(/[^0-9kK]/g,'').toUpperCase();
+  if(r.length>1) r=r.slice(0,-1)+'-'+r.slice(-1);
+  el.value=r;
+  clearTimeout(window._rutTimer);
+  window._rutTimer=setTimeout(()=>checkRutExistente(r),700);
+}
+
+async function checkRutExistente(rut){
+  if(!rut||rut.length<4||!S.db)return;
+  const hint=$('rut-hint');
+  if(!hint)return;
+  try{
+    const snap=await S.db.ref('aceptaciones_terminos').orderByChild('rut').equalTo(rut).limitToFirst(1).get();
+    if(snap.exists()){
+      const datos=Object.values(snap.val())[0];
+      hint.style.display='block';
+      hint.innerHTML=`✓ RUT ya registró aceptación el <strong>${datos.fecha}</strong> como <strong>${datos.nombre}</strong>.
+        <button onclick="saltarTerminos('${datos.nombre}')"
+          style="background:none;border:none;color:#059669;font-weight:700;cursor:pointer;text-decoration:underline;font-size:12px;display:block;margin-top:4px">
+          Continuar sin re-ingresar →
+        </button>`;
+    } else {
+      hint.style.display='none';
+      hint.innerHTML='';
+    }
+  }catch(e){console.warn('Error verificando RUT:',e);}
+}
+
+function saltarTerminos(nombre){
+  localStorage.setItem('cpa_terms_accepted','1');
+  localStorage.setItem('cpa_terms_user',nombre);
+  showScreen('screen-login');
+  toast('Bienvenido/a de nuevo, '+nombre.split(' ')[0]+' ✓');
+}
+function toggleTermsCheck(){
+  const chk=$('terms-chk');
+  chk.checked=!chk.checked;
+  updateTermsBtn();
+}
+function updateTermsBtn(){
+  const nombre=($('terms-nombre')||{}).value?.trim()||'';
+  const rut=($('terms-rut')||{}).value?.trim()||'';
+  const org=($('terms-org')||{}).value?.trim()||'';
+  const chk=($('terms-chk')||{}).checked||false;
+  const btn=$('terms-btn');
+  if(nombre&&rut&&org&&chk) btn.classList.add('ready');
+  else btn.classList.remove('ready');
+}
+async function aceptarTerminos(){
+  const nombre=($('terms-nombre')||{}).value?.trim()||'';
+  const rut=($('terms-rut')||{}).value?.trim()||'';
+  const org=($('terms-org')||{}).value?.trim()||'';
+  const chk=($('terms-chk')||{}).checked||false;
+  const err=$('terms-err');
+  if(!nombre||!rut||!org||!chk){
+    if(err)err.style.display='block';
+    return;
+  }
+  if(err)err.style.display='none';
+  const registro={
+    nombre, rut, organizacion:org,
+    fecha:new Date().toLocaleString('es-CL'),
+    fechaISO:new Date().toISOString(),
+    version:'1.0',
+    userAgent:navigator.userAgent.slice(0,120),
+  };
+  try{
+    if(S.db) await S.db.ref('aceptaciones_terminos').push(registro);
+  }catch(e){console.warn('No se pudo guardar aceptación:',e);}
+  localStorage.setItem('cpa_terms_accepted','1');
+  localStorage.setItem('cpa_terms_user',nombre);
+  showScreen('screen-login');
+  toast('Términos aceptados ✓ Bienvenido/a, '+nombre.split(' ')[0]);
+}
+
+// ── MÓDULO PROCEDIMIENTOS ────────────────────────────────────────────────────
+let procTipoActivo = null;
+
+const PROCED_TIPOS = [
+  {id:'ev',    icon:'💉', label:'Endovenoso'},
+  {id:'cur',   icon:'🔬', label:'Curación'},
+  {id:'inm',   icon:'🩹', label:'Inmovilización'},
+  {id:'ret',   icon:'✂️',  label:'Retiro de puntos'},
+];
+
+const PROCED_MATERIALES = {
+  ev: [
+    { id:'via',   label:'Vía venosa', type:'select', opts:['G18','G20','G22'] },
+    { id:'bajada',label:'Bajada de suero', type:'check' },
+    { id:'fij',   label:'Fijación adhesivo transparente', type:'check' },
+    { id:'llave', label:'Llave 3 pasos', type:'check' },
+    { id:'jer',   label:'Jeringa', type:'select', opts:['3ml','5ml','10ml','20ml'] },
+    { id:'sf',    label:'Suero Fisiológico', type:'select', opts:['500ml','250ml','100ml','20ml'] },
+  ],
+  cur: [
+    { id:'kit',   label:'Kit de curación', type:'check' },
+    { id:'gasas', label:'Gasas curación', type:'qty', placeholder:'Cantidad' },
+    { id:'sf20',  label:'Suero Fisiológico 20ml', type:'qty', placeholder:'Unidades' },
+    { id:'guante',label:'Guante estéril', type:'select', opts:['6','6.5','7','7.5','8'] },
+    { id:'fijcur',label:'Fijación', type:'selectGroup', groups:[
+        {label:'Fixomull', val:'Fixomull'},
+        {label:'Micropore', val:'Micropore'},
+        {label:'Adhesivo transparente', val:'', sub:'select', subOpts:['6x7','10x10','10x20']},
+    ]},
+    { id:'aposito',label:'Apósito interactivo', type:'selectQty', opts:[
+        'DACC','Bactigrass','Tull Vaselina','Gasa parafinada','Telfa','Nada',
+        'Alginato Calcio','Alginato Plata','Otros'
+    ]},
+    { id:'bisturi',label:'Bisturí', type:'qty', placeholder:'Cantidad' },
+    { id:'aguja', label:'Aguja', type:'selectQty', opts:['21G','18G'] },
+  ],
+  inm: [
+    { id:'ferula',label:'Férula', type:'check' },
+    { id:'venda', label:'Venda elástica', type:'check' },
+    { id:'algod', label:'Algodón ortopédico', type:'check' },
+    { id:'yeso',  label:'Yeso', type:'check' },
+    { id:'cabestrillo', label:'Cabestrillo', type:'check' },
+  ],
+  ret: [
+    { id:'kit_ret', label:'Kit retiro puntos', type:'check' },
+    { id:'gasas_r', label:'Gasas', type:'qty', placeholder:'Cantidad' },
+    { id:'sf_ret',  label:'Suero Fisiológico 20ml', type:'qty', placeholder:'Unidades' },
+    { id:'puntos',  label:'Nº puntos retirados', type:'qty', placeholder:'Cantidad' },
+  ],
+};
+
+function renderProcedTab(){
+  const c=$('proced-content');if(!c)return;
+  const ptsEnAtencion=Object.values(S.attending)
+    .filter(p=>p.queue==='procedimientos'&&(S.user.role==='admin'||p.attRole===S.user.role));
+
+  // Historial del día
+  const histHoy=(S.completed||[])
+    .filter(r=>r.procReg)
+    .sort((a,b)=>b.ts-a.ts)
+    .slice(0,10);
+
+  c.innerHTML=`
+    <div class="proced-header">Seleccionar paciente en atención</div>
+    ${ptsEnAtencion.length===0
+      ? `<div class="q-empty" style="background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:16px">No tienes pacientes en procedimientos ahora</div>`
+      : `<select class="proced-patient-sel" id="proced-pid" onchange="renderProcedForm()">
+          <option value="">— Selecciona el paciente —</option>
+          ${ptsEnAtencion.map(p=>`<option value="${p.id}">${p.name}${p.rut?' · '+p.rut:''}</option>`).join('')}
+         </select>`
+    }
+    <div class="proced-header">Tipo de procedimiento</div>
+    <div class="proced-type-btns">
+      ${PROCED_TIPOS.map(t=>`
+        <button class="proced-type-btn${procTipoActivo===t.id?' active':''}" onclick="selectProcTipo('${t.id}')">
+          <span class="icon">${t.icon}</span>${t.label}
+        </button>`).join('')}
+    </div>
+    <div id="proced-form-zone"></div>
+    ${histHoy.length?`
+      <div class="proced-hist">
+        <div class="proced-header">Procedimientos registrados hoy</div>
+        ${histHoy.map(r=>`<div class="proced-hist-item">
+          <div class="phi-header">
+            <div>
+              <div class="phi-name">${r.name}</div>
+              <div class="phi-meta">${r.procReg.tipo} · ${r.attBy||''} · ${new Date(r.ts).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})} · ${fmtMin(r.attMs)}min</div>
+            </div>
+            <span class="phi-type">${r.procReg.tipo}</span>
+          </div>
+          <div class="phi-mats">${r.procReg.materiales.replace(/\|/g,'<br>')}</div>
+        </div>`).join('')}
+      </div>`:''}
+  `;
+  if(procTipoActivo) renderProcedForm();
+}
+
+function selectProcTipo(id){
+  procTipoActivo=id;
+  renderProcedTab();
+}
+
+function renderProcedForm(){
+  const z=$('proced-form-zone');if(!z||!procTipoActivo)return;
+  const tipo=PROCED_TIPOS.find(t=>t.id===procTipoActivo);
+  const mats=PROCED_MATERIALES[procTipoActivo]||[];
+
+  const matHtml=mats.map(m=>{
+    if(m.type==='check') return `
+      <div class="mat-section">
+        <div class="mat-row">
+          <div class="mat-check"><input type="checkbox" id="mat_${m.id}"/><label for="mat_${m.id}">${m.label}</label></div>
+        </div>
+      </div>`;
+    if(m.type==='select') return `
+      <div class="mat-section">
+        <div class="mat-title">${m.label}</div>
+        <div class="mat-row">
+          <input type="checkbox" id="mat_${m.id}_chk" style="width:16px;height:16px;accent-color:#2563EB;cursor:pointer"/>
+          <select class="mat-select" id="mat_${m.id}_sel">${m.opts.map(o=>`<option>${o}</option>`).join('')}</select>
+        </div>
+      </div>`;
+    if(m.type==='qty') return `
+      <div class="mat-section">
+        <div class="mat-row">
+          <div class="mat-check"><input type="checkbox" id="mat_${m.id}_chk"/><label for="mat_${m.id}_chk">${m.label}</label></div>
+          <input type="number" class="mat-qty" id="mat_${m.id}_qty" placeholder="${m.placeholder||'Cant.'}" min="1" value="1"/>
+        </div>
+      </div>`;
+    if(m.type==='selectQty') return `
+      <div class="mat-section">
+        <div class="mat-title">${m.label}</div>
+        <div class="mat-row">
+          <input type="checkbox" id="mat_${m.id}_chk" style="width:16px;height:16px;accent-color:#2563EB;cursor:pointer" onclick="onSelectQtyChk('${m.id}')"/>
+          <select class="mat-select" id="mat_${m.id}_sel" onchange="onAposiChange('${m.id}',this.value)">${m.opts.map(o=>`<option>${o}</option>`).join('')}</select>
+          <input type="number" class="mat-qty" id="mat_${m.id}_qty" placeholder="Cant." min="1" value="1"/>
+        </div>
+        <div id="mat_${m.id}_otros" style="display:none;margin-top:6px">
+          <input type="text" id="mat_${m.id}_otros_txt" placeholder="Especificar..." style="width:100%;padding:7px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-family:var(--font)"/>
+        </div>
+      </div>`;
+    if(m.type==='selectGroup') return `
+      <div class="mat-section">
+        <div class="mat-title">${m.label}</div>
+        <div class="mat-row">
+          <input type="checkbox" id="mat_${m.id}_chk" style="width:16px;height:16px;accent-color:#2563EB;cursor:pointer"/>
+          <select class="mat-select" id="mat_${m.id}_sel" onchange="onFijChange(this.value)">
+            ${m.groups.map(g=>`<option value="${g.val||g.label}">${g.label}</option>`).join('')}
+          </select>
+          <select class="mat-select" id="mat_${m.id}_sub" style="display:none">
+            ${(m.groups.find(g=>g.sub)?m.groups.find(g=>g.sub).subOpts:[]).map(o=>`<option>${o}</option>`).join('')}
+          </select>
+        </div>
+      </div>`;
+    return '';
+  }).join('');
+
+  z.innerHTML=`<div class="proced-form">
+    <h3>${tipo.icon} Registro de ${tipo.label}</h3>
+    <button type="button" onclick="window.open('https://forms.office.com/pages/responsepage.aspx?id=Cr5LbVRWaUymgr99za7Y54zBkYtXGQFNm-bkdCACrIlUQkFYMVg3QzYzRVY4UDNaNUQzR0tWNUkySi4u&origin=QRCode&route=shorturl','_blank')"
+      style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px 14px;background:#7C3AED;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);margin-bottom:14px;transition:opacity .2s"
+      onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+      📷 Subir fotos del procedimiento
+    </button>
+    <div class="mat-title" style="margin-bottom:12px">Materiales utilizados</div>
+    ${matHtml}
+    <div class="mat-title" style="margin-top:8px">Observaciones</div>
+    <textarea class="proced-obs" id="proced-obs" placeholder="Observaciones adicionales del procedimiento..."></textarea>
+    <button class="proced-save-btn" onclick="guardarProced()">💾 Guardar registro de procedimiento</button>
+  </div>`;
+}
+
+function onAposiChange(id, val){
+  const otrosDiv=$('mat_'+id+'_otros');
+  if(otrosDiv) otrosDiv.style.display=val==='Otros'?'block':'none';
+}
+function onSelectQtyChk(id){
+  // trigger onAposiChange if needed
+  const sel=$('mat_'+id+'_sel');
+  if(sel) onAposiChange(id,sel.value);
+}
+
+function onFijChange(val){
+  const sub=$('mat_fijcur_sub');if(!sub)return;
+  sub.style.display=val==='Adhesivo transparente'?'inline-block':'none';
+}
+
+function buildMatString(){
+  const mats=PROCED_MATERIALES[procTipoActivo]||[];
+  const lines=[];
+  mats.forEach(m=>{
+    if(m.type==='check'){
+      const el=$('mat_'+m.id);
+      if(el&&el.checked) lines.push(m.label);
+    } else if(m.type==='select'){
+      const chk=$('mat_'+m.id+'_chk');
+      const sel=$('mat_'+m.id+'_sel');
+      if(chk&&chk.checked&&sel) lines.push(`${m.label}: ${sel.value}`);
+    } else if(m.type==='qty'){
+      const chk=$('mat_'+m.id+'_chk');
+      const qty=$('mat_'+m.id+'_qty');
+      if(chk&&chk.checked) lines.push(`${m.label}: ${qty?qty.value:1}`);
+    } else if(m.type==='selectQty'){
+      const chk=$('mat_'+m.id+'_chk');
+      const sel=$('mat_'+m.id+'_sel');
+      const qty=$('mat_'+m.id+'_qty');
+      if(chk&&chk.checked&&sel){
+        let val=sel.value;
+        if(val==='Otros'){
+          const txt=($('mat_'+m.id+'_otros_txt')||{}).value?.trim()||'';
+          val='Otros: '+(txt||'sin especificar');
+        }
+        lines.push(`${m.label}: ${val} x${qty?qty.value:1}`);
+      }
+    } else if(m.type==='selectGroup'){
+      const chk=$('mat_'+m.id+'_chk');
+      const sel=$('mat_'+m.id+'_sel');
+      const sub=$('mat_'+m.id+'_sub');
+      if(chk&&chk.checked&&sel){
+        const extra=sub&&sub.style.display!=='none'?' '+sub.value:'';
+        lines.push(`${m.label}: ${sel.value}${extra}`);
+      }
+    }
+  });
+  const obs=($('proced-obs')||{}).value?.trim()||'';
+  if(obs) lines.push('Obs: '+obs);
+  return lines.join(' | ');
+}
+
+async function guardarProced(){
+  const pidEl=$('proced-pid');
+  const pid=pidEl?pidEl.value:'';
+  if(!pid){toast('Selecciona el paciente primero');return;}
+  const p=S.attending[pid];if(!p)return;
+  const tipo=PROCED_TIPOS.find(t=>t.id===procTipoActivo);
+  const matStr=buildMatString();
+  if(!matStr){toast('Selecciona al menos un material');return;}
+
+  const rec={
+    id:pid, name:p.name, rut:p.rut||'', tipo:p.tipo||'',
+    queue:'procedimientos', waitMs:p.waitMs||0,
+    attMs:now()-p.attStart, enteredAt:p.enteredAt,
+    attBy:S.user.name, attRole:S.user.role,
+    note:p.note||'', destQueue:'procedimientos',
+    doneAt:null, ts:now(), partial:true,
+    procReg:{ tipo:tipo.label, materiales:matStr, registradoPor:S.user.name, fecha:new Date().toLocaleString('es-CL') }
+  };
+  if(!S.completed)S.completed=[];
+  S.completed.push(rec);
+  await dbPush('completed',rec);
+  toast('✓ Procedimiento registrado — '+tipo.label);
+  procTipoActivo=null;
+  renderProcedTab();
+}
+
+// ── GALLO EASTER EGG ─────────────────────────────────────────────────────────
+let galloClicks=0,galloTimer=null;
+function clickLogo(){
+  galloClicks++;
+  clearTimeout(galloTimer);
+  galloTimer=setTimeout(()=>galloClicks=0,2000);
+  if(galloClicks>=5){
+    galloClicks=0;
+    $('gallo-overlay').classList.add('show');
+    // confetti de gallina
+    launchConfetti();
+  }
+}
+function cerrarGallo(){$('gallo-overlay').classList.remove('show');}
+
+// ── POLLITO LOADING ───────────────────────────────────────────────────────────
+function showPollito(){const p=$('pollito-loading');if(p)p.classList.add('show');}
+function hidePollito(){const p=$('pollito-loading');if(p)p.classList.remove('show');}
+
+// ── CONFETTI ──────────────────────────────────────────────────────────────────
+function launchConfetti(){
+  const canvas=$('confetti-canvas');
+  if(!canvas)return;
+  canvas.style.display='block';
+  const ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+  const colors=['#059669','#2563EB','#D97706','#7C3AED','#DC2626','#0891B2','#EA580C'];
+  const pieces=[];
+  for(let i=0;i<120;i++){
+    pieces.push({
+      x:Math.random()*canvas.width,
+      y:-10-Math.random()*100,
+      r:Math.random()*6+3,
+      d:Math.random()*80+40,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      tilt:Math.random()*10-10,
+      tiltAngle:0,
+      tiltAngleInc:Math.random()*0.07+0.05,
+      shape:Math.random()>0.5?'circle':'rect',
+      opacity:1,
+    });
+  }
+  let angle=0,frame=0,done=false;
+  function draw(){
+    if(done)return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    angle+=0.01;frame++;
+    let allGone=true;
+    pieces.forEach((p,i)=>{
+      if(p.y<canvas.height+20)allGone=false;
+      p.tiltAngle+=p.tiltAngleInc;
+      p.y+=Math.cos(angle+p.d)*2+2;
+      p.x+=Math.sin(angle)*1.5;
+      p.tilt=Math.sin(p.tiltAngle)*12;
+      if(frame>80)p.opacity=Math.max(0,p.opacity-0.015);
+      ctx.globalAlpha=p.opacity;
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      if(p.shape==='circle'){
+        ctx.arc(p.x+p.tilt,p.y,p.r,0,2*Math.PI);
+      } else {
+        ctx.rect(p.x+p.tilt,p.y,p.r*2,p.r);
+      }
+      ctx.fill();
+    });
+    if(allGone||frame>200){
+      done=true;
+      canvas.style.display='none';
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      return;
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function showScreen(id){
+  const target=document.getElementById(id);
+  if(!target){console.error('Screen not found:',id);return;}
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  target.classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  showPollito();
+  try{
+    await initFirebase(FB_CFG);
+    hidePollito();
+    if(!localStorage.getItem('cpa_terms_accepted')){
+      showScreen('screen-terms');
+    } else {
+      showScreen('screen-login');
+      setTimeout(precargarNombre,50);
+    }
+  }catch(e){
+    hidePollito();
+    showScreen('screen-setup');
+    console.error('Firebase error:',e);
+  }
+});
+</script>
+</body>
+</html>
