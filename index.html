@@ -736,7 +736,7 @@ input,select,textarea{transition:var(--transition)}
     });
 })();
 
-/* @build:_0x870e10b7fcd4bbda */
+/* @build:_0xf14a73d457bc708d */
 
 
 const QUEUES=[
@@ -810,7 +810,7 @@ const SUCURSALES=[
   {id:'cabrero',    name:'Cabrero'},
 ];
 
-function _0x1dfdf81a(path){
+function _0x6be8740a(path){
   return `sucursales/${S.sucursal||'laja'}/${path}`;
 }
 
@@ -878,12 +878,12 @@ function usarDemo(){
   showScreen('screen-login');
 }
 
-function _0xbb5d1e47(){
+function _0x18b8ba2f(){
   if(S.demo||!S.db){renderAll();return;}
   stopSync();
-  const pRef=S.db.ref(_0x1dfdf81a('\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073'));
-  const aRef=S.db.ref(_0x1dfdf81a('\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067'));
-  const cRef=S.db.ref(_0x1dfdf81a('\u0063\u006f\u006d\u0070\u006c\u0065\u0074\u0065\u0064'));
+  const pRef=S.db.ref(_0x6be8740a('\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073'));
+  const aRef=S.db.ref(_0x6be8740a('\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067'));
+  const cRef=S.db.ref(_0x6be8740a('\u0063\u006f\u006d\u0070\u006c\u0065\u0074\u0065\u0064'));
   const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderSync();});
   const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderSync();});
   const onC=cRef.on('value',snap=>{
@@ -902,15 +902,15 @@ function stopSync(){
 
 async function dbSet(path,data){
   if(S.demo){applyLocal(path,data);renderSync();return;}
-  await S.db.ref(_0x1dfdf81a(path)).set(data);
+  await S.db.ref(_0x6be8740a(path)).set(data);
 }
 async function dbRemove(path){
   if(S.demo){removeLocal(path);renderSync();return;}
-  await S.db.ref(_0x1dfdf81a(path)).remove();
+  await S.db.ref(_0x6be8740a(path)).remove();
 }
 async function dbPush(path,data){
   if(S.demo){if(!S.completed)S.completed=[];S.completed.push(data);return;}
-  await S.db.ref(_0x1dfdf81a(path)).push(data);
+  await S.db.ref(_0x6be8740a(path)).push(data);
 }
 async function syncUp(){}  
 function applyLocal(path,data){const p=path.split('/');if(p[0]==='\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073')S.patients[p[1]]=data;else if(p[0]==='\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067')S.attending[p[1]]=data;}
@@ -928,7 +928,7 @@ function showTab(tab){
   if(bs) bs.className='tab-btn'+(tab==='stats'?' on':'');
   if(tab==='filas'){ renderAdd(); renderAlerts(); renderQueues(); renderAttending(); }
   if(tab==='stats') renderStats();
-  if(tab==='proced') _0x47933465();
+  if(tab==='proced') _0xca03ed35();
 }
 
 function toggleFilas(){
@@ -1047,7 +1047,7 @@ function login(id,name,role){
   if(S.demo){$('live-pill').className='live-pill demo';$('live-txt').textContent='DEMO';}
   showAllQueues = false;
   showScreen('screen-main');showTab('filas');
-  _0xbb5d1e47();startTick();renderAll();
+  _0x18b8ba2f();startTick();renderAll();
 }
 
 function logout(){
@@ -1267,7 +1267,7 @@ async function sendPatient(pid,p,destId,note){
     toast('Derivado a '+qInfo(destId).name+' ✓');
   } else {
     toast('🎉 Alta registrada con éxito');
-    _0x0a6350b8();
+    _0xbb1c7156();
   }
 }
 
@@ -1448,8 +1448,8 @@ function renderAttending(){
 function startMonitor(){
   stopSync();
   if(!S.demo&&S.db){
-    const pRef=S.db.ref(_0x1dfdf81a('\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073'));
-    const aRef=S.db.ref(_0x1dfdf81a('\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067'));
+    const pRef=S.db.ref(_0x6be8740a('\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073'));
+    const aRef=S.db.ref(_0x6be8740a('\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067'));
     const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderMonitor();});
     const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderMonitor();});
     S.listeners=[{ref:pRef,ev:'value',fn:onP},{ref:aRef,ev:'value',fn:onA}];
@@ -1612,7 +1612,7 @@ function renderStats(){
   const deleteBar = isAdmin && rows.length ? `
     <div id="delete-bar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:var(--radius);margin-bottom:10px;display:none">
       <span id="delete-count" style="font-size:13px;font-weight:700;color:#991B1B">0 registros seleccionados</span>
-      <button onclick="_0xdec19b30()"
+      <button onclick="_0xe5e1751b()"
         style="padding:7px 16px;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);transition:opacity .2s"
         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
         🗑 Borrar seleccionados
@@ -1784,7 +1784,7 @@ function abrirProcedDesdeAtt(pid){
   
   setTimeout(()=>{
     const sel=$('proced-pid');
-    if(sel){sel.value=pid;_0xd84fd373();}
+    if(sel){sel.value=pid;_0x74026ff4();}
   },100);
 }
 
@@ -1844,7 +1844,7 @@ const PROCED_MATERIALES = {
   ],
 };
 
-function _0x47933465(){
+function _0xca03ed35(){
   const c=$('proced-content');if(!c)return;
   const ptsEnAtencion=Object.values(S.attending)
     .filter(p=>p.queue==='procedimientos'&&(S.user.role==='admin'||p.attRole===S.user.role));
@@ -1859,7 +1859,7 @@ function _0x47933465(){
     <div class="proced-header">Seleccionar paciente en atención</div>
     ${ptsEnAtencion.length===0
       ? `<div class="q-empty" style="background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:16px">No tienes pacientes en procedimientos ahora</div>`
-      : `<select class="proced-patient-sel" id="proced-pid" onchange="_0xd84fd373()">
+      : `<select class="proced-patient-sel" id="proced-pid" onchange="_0x74026ff4()">
           <option value="">— Selecciona el paciente —</option>
           ${ptsEnAtencion.map(p=>`<option value="${p.id}">${p.name}${p.rut?' · '+p.rut:''}</option>`).join('')}
          </select>`
@@ -1887,15 +1887,15 @@ function _0x47933465(){
         </div>`).join('')}
       </div>`:''}
   `;
-  if(procTipoActivo) _0xd84fd373();
+  if(procTipoActivo) _0x74026ff4();
 }
 
 function selectProcTipo(id){
   procTipoActivo=id;
-  _0x47933465();
+  _0xca03ed35();
 }
 
-function _0xd84fd373(){
+function _0x74026ff4(){
   const z=$('proced-form-zone');if(!z||!procTipoActivo)return;
   const tipo=PROCED_TIPOS.find(t=>t.id===procTipoActivo);
   const mats=PROCED_MATERIALES[procTipoActivo]||[];
@@ -1961,7 +1961,7 @@ function _0xd84fd373(){
     ${matHtml}
     <div class="mat-title" style="margin-top:8px">Observaciones</div>
     <textarea class="proced-obs" id="proced-obs" placeholder="Observaciones adicionales del procedimiento..."></textarea>
-    <button class="proced-save-btn" onclick="_0x5d2b19ad()">💾 Guardar registro de procedimiento</button>
+    <button class="proced-save-btn" onclick="_0x99a75e15()">💾 Guardar registro de procedimiento</button>
   </div>`;
 }
 
@@ -1980,7 +1980,7 @@ function onFijChange(val){
   sub.style.display=val==='Adhesivo transparente'?'inline-block':'none';
 }
 
-function _0x3d65e60c(){
+function _0xb50089a3(){
   const mats=PROCED_MATERIALES[procTipoActivo]||[];
   const lines=[];
   mats.forEach(m=>{
@@ -2022,13 +2022,13 @@ function _0x3d65e60c(){
   return lines.join(' | ');
 }
 
-async function _0x5d2b19ad(){
+async function _0x99a75e15(){
   const pidEl=$('proced-pid');
   const pid=pidEl?pidEl.value:'';
   if(!pid){toast('Selecciona el paciente primero');return;}
   const p=S.attending[pid];if(!p)return;
   const tipo=PROCED_TIPOS.find(t=>t.id===procTipoActivo);
-  const matStr=_0x3d65e60c();
+  const matStr=_0xb50089a3();
   if(!matStr){toast('Selecciona al menos un material');return;}
 
   const rec={
@@ -2045,7 +2045,7 @@ async function _0x5d2b19ad(){
   await dbPush('\u0063\u006f\u006d\u0070\u006c\u0065\u0074\u0065\u0064',rec);
   toast('✓ Procedimiento registrado — '+tipo.label);
   procTipoActivo=null;
-  _0x47933465();
+  _0xca03ed35();
 }
 
 let galloClicks=0,galloTimer=null;
@@ -2057,7 +2057,7 @@ function clickLogo(){
     galloClicks=0;
     $('gallo-overlay').classList.add('show');
     
-    _0x0a6350b8();
+    _0xbb1c7156();
   }
 }
 function cerrarGallo(){$('gallo-overlay').classList.remove('show');}
@@ -2084,17 +2084,17 @@ function onRowChk(){
   if(chkAll) chkAll.checked=selected===total&&total>0;
 }
 
-function _0xdec19b30(){
+function _0xe5e1751b(){
   const selected=document.querySelectorAll('.row-chk:checked').length;
   if(!selected)return;
   
   if(!confirm(`⚠️ ¿Estás seguro de que deseas borrar ${selected} registro${selected!==1?'s':''}?\n\nEsta acción no se puede deshacer.`)) return;
   
   if(!confirm(`🔴 CONFIRMACIÓN FINAL\n\nSe borrarán ${selected} registro${selected!==1?'s':''} permanentemente de la base de datos.\n\n¿Confirmas el borrado?`)) return;
-  _0x113aa395();
+  _0x00cc30cc();
 }
 
-async function _0x113aa395(){
+async function _0x00cc30cc(){
   const rows=window._statsRows||[];
   const chks=document.querySelectorAll('.row-chk');
   const aEliminar=[];
@@ -2108,7 +2108,7 @@ async function _0x113aa395(){
   for(const r of aEliminar){
     if(r._fbKey && S.db){
       try{
-        await S.db.ref(_0x1dfdf81a('completed/'+r._fbKey)).remove();
+        await S.db.ref(_0x6be8740a('completed/'+r._fbKey)).remove();
         borrados++;
       }catch(e){console.warn('Error borrando:',e);}
     } else if(S.demo){
@@ -2122,7 +2122,7 @@ async function _0x113aa395(){
   renderStats();
 }
 
-function _0x0a6350b8(){
+function _0xbb1c7156(){
   const canvas=$('confetti-canvas');
   if(!canvas)return;
   canvas.style.display='block';
