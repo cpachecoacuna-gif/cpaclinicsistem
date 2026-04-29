@@ -551,7 +551,6 @@ input,select,textarea{transition:var(--transition)}
     <div class="tb-right">
       <div class="live-pill" id="live-pill"><div class="dot green"></div><span id="live-txt">EN VIVO</span></div>
       <button class="tab-btn on" id="btn-filas" onclick="toggleFilas()">🏥 Filas</button>
-      <button class="tab-btn" id="btn-proced" onclick="showTab('proced')" style="display:none">📋 Procedimientos</button>
       <button class="tab-btn" id="btn-stats" onclick="showTab('stats')">📊 Datos</button>
       <button class="logout-btn" onclick="logout()">Salir</button>
     </div>
@@ -615,6 +614,10 @@ input,select,textarea{transition:var(--transition)}
         <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleProc('proc-cnt')">
           <input type="checkbox" id="proc-cnt" style="width:17px;height:17px;accent-color:#2563EB;cursor:pointer" onclick="event.stopPropagation()"/>
           <label for="proc-cnt" style="font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer">🤝 Contención no Ley</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleProc('proc-sel')">
+          <input type="checkbox" id="proc-sel" style="width:17px;height:17px;accent-color:#2563EB;cursor:pointer" onclick="event.stopPropagation()"/>
+          <label for="proc-sel" style="font-size:13px;font-weight:600;color:#1E40AF;cursor:pointer">📋 Evaluación SEL</label>
         </div>
       </div>
     </div>
@@ -721,6 +724,7 @@ const TIPOS=[
   {val:'CRO', label:'CRO — Crónicos'},
   {val:'CUR', label:'CUR — Curaciones'},
   {val:'GNP', label:'GNP — Gestión no presencial'},
+  {val:'RSEL',label:'RSEL — Reevaluación SEL'},
 ];
 const ROLES={admin:'Administrador',admision:'Admisión',medico:'Médico/a',enfermero:'Enfermero/a',tens:'TENS',monitor:'Monitor'};
 const AVCOL={admin:['#F0F9FF','#0369A1'],admision:['#FFFBEB','#B45309'],medico:['#F9FAFB','#374151'],enfermero:['#ECFDF5','#065F46'],tens:['#EFF6FF','#1D4ED8'],monitor:['#1C1917','#F5F5F4']};
@@ -874,13 +878,12 @@ let showAllQueues = false;
 
 function showTab(tab){
   const tf=$('tab-filas'), ts=$('tab-stats'), tp=$('tab-proced');
-  const bf=$('btn-filas'), bs=$('btn-stats'), bp=$('btn-proced');
+  const bf=$('btn-filas'), bs=$('btn-stats');
   if(tf) tf.style.display=tab==='filas'?'block':'none';
   if(ts) ts.style.display=tab==='stats'?'block':'none';
   if(tp) tp.style.display=tab==='proced'?'block':'none';
   if(bf) bf.className='tab-btn'+(tab==='filas'?' on':'');
   if(bs) bs.className='tab-btn'+(tab==='stats'?' on':'');
-  if(bp) bp.className='tab-btn'+(tab==='proced'?' on':'');
   if(tab==='filas'){ renderAdd(); renderAlerts(); renderQueues(); renderAttending(); }
   if(tab==='stats') renderStats();
   if(tab==='proced') renderProcedTab();
@@ -976,9 +979,6 @@ function login(id,name,role){
   if(S.demo){$('live-pill').className='live-pill demo';$('live-txt').textContent='DEMO';}
   showAllQueues = false;
   showScreen('screen-main');showTab('filas');
-  // Mostrar tab procedimientos solo para roles que lo usan
-  const bp=$('btn-proced');
-  if(bp) bp.style.display=['admin','enfermero','tens','medico'].includes(role)?'block':'none';
   startSync();startTick();renderAll();
 }
 
@@ -1121,6 +1121,7 @@ function buildProcNote(){
     {id:'proc-inm',  label:'Inmovilización'},
     {id:'proc-cur',  label:'Curación'},
     {id:'proc-cnt',  label:'Contención no Ley'},
+    {id:'proc-sel',  label:'Evaluación SEL'},
   ];
   const selected=checks.filter(c=>$(c.id)&&$(c.id).checked).map(c=>{
     if(c.id==='proc-ev'){
@@ -1774,11 +1775,11 @@ function renderProcedForm(){
 
   z.innerHTML=`<div class="proced-form">
     <h3>${tipo.icon} Registro de ${tipo.label}</h3>
-    <button type="button" onclick="window.open('https://forms.office.com/pages/responsepage.aspx?id=Cr5LbVRWaUymgr99za7Y54zBkYtXGQFNm-bkdCACrIlUQkFYMVg3QzYzRVY4UDNaNUQzR0tWNUkySi4u&origin=QRCode&route=shorturl','_blank')"
+    ${(procTipoActivo==='cur'||procTipoActivo==='ret')?`<button type="button" onclick="window.open('https://forms.office.com/pages/responsepage.aspx?id=Cr5LbVRWaUymgr99za7Y54zBkYtXGQFNm-bkdCACrIlUQkFYMVg3QzYzRVY4UDNaNUQzR0tWNUkySi4u&origin=QRCode&route=shorturl','_blank')"
       style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px 14px;background:#7C3AED;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);margin-bottom:14px;transition:opacity .2s"
       onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
       📷 Subir fotos del procedimiento
-    </button>
+    </button>`:''}
     <div class="mat-title" style="margin-bottom:12px">Materiales utilizados</div>
     ${matHtml}
     <div class="mat-title" style="margin-top:8px">Observaciones</div>
