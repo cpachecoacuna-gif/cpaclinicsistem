@@ -1045,8 +1045,8 @@ function logout(){
   stopSync();stopTick();clearInterval(S.monInt);
   S.user=null;
   if(!S.demo){S.patients={};S.attending={};S.completed=[];}
-  // Volver a selección de sucursal
-  showScreen('screen-sucursal');
+  showScreen('screen-login');
+  setTimeout(precargarNombre,50);
 }
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
