@@ -719,24 +719,11 @@ input,select,textarea{transition:var(--transition)}
    a la Ley N°17.336 de Propiedad Intelectual de Chile.
    ============================================================ */
 
-// Anti-tamper
 (function(){
-    var _d=function(){};
-    setInterval(function(){
-        var _s=+new Date();
-        _d();
-        if(+new Date()-_s>100){
-            // DevTools detectado — solo log, no interrumpe uso normal
-            console.clear();
-        }
-    },1000);
-    // Deshabilitar clic derecho en producción
     document.addEventListener('contextmenu',function(e){
         if(!window._devMode) e.preventDefault();
     });
 })();
-
-/* @build:_0x0faa6150fc4b127d */
 
 
 const QUEUES=[
@@ -810,7 +797,7 @@ const SUCURSALES=[
   {id:'cabrero',    name:'Cabrero'},
 ];
 
-function _0x19972dc5(path){
+function dbPath(path){
   return `sucursales/${S.sucursal||'laja'}/${path}`;
 }
 
@@ -828,7 +815,7 @@ function resetConfig(){location.reload();}
 async function connectFirebase(){
   const apiKey=$('cfg-apikey').value.trim();
   const authDomain=$('cfg-authdomain').value.trim();
-  const dbURL=$('cfg-dburl').value.trim().replace(/\/+$/,''); 
+  const dbURL=$('cfg-dburl').value.trim().replace(/\/+$/,''); // quita barras al final
   const projectId=$('cfg-projectid').value.trim();
   if(!apiKey||!dbURL){showErr('API Key y Database URL son obligatorios');return;}
   const btn=$('connect-btn');btn.disabled=true;btn.textContent='Conectando...';
@@ -851,7 +838,7 @@ async function initFirebase(cfg){
   const app = firebase.initializeApp(cfg);
   S.db = firebase.database(app);
   
-  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tiempo agotado')),8000));
+  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tiempo agotado')),4000));
   await Promise.race([S.db.ref('.info/connected').get(), timeout]);
 }
 
@@ -873,12 +860,12 @@ function usarDemo(){
   showScreen('screen-login');
 }
 
-function _0x330f09a7(){
+function startSync(){
   if(S.demo||!S.db){renderAll();return;}
   stopSync();
-  const pRef=S.db.ref(_0x19972dc5('\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073'));
-  const aRef=S.db.ref(_0x19972dc5('\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067'));
-  const cRef=S.db.ref(_0x19972dc5('\u0063\u006f\u006d\u0070\u006c\u0065\u0074\u0065\u0064'));
+  const pRef=S.db.ref(dbPath('patients'));
+  const aRef=S.db.ref(dbPath('attending'));
+  const cRef=S.db.ref(dbPath('completed'));
   const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderSync();});
   const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderSync();});
   const onC=cRef.on('value',snap=>{
@@ -897,19 +884,19 @@ function stopSync(){
 
 async function dbSet(path,data){
   if(S.demo){applyLocal(path,data);renderSync();return;}
-  await S.db.ref(_0x19972dc5(path)).set(data);
+  await S.db.ref(dbPath(path)).set(data);
 }
 async function dbRemove(path){
   if(S.demo){removeLocal(path);renderSync();return;}
-  await S.db.ref(_0x19972dc5(path)).remove();
+  await S.db.ref(dbPath(path)).remove();
 }
 async function dbPush(path,data){
   if(S.demo){if(!S.completed)S.completed=[];S.completed.push(data);return;}
-  await S.db.ref(_0x19972dc5(path)).push(data);
+  await S.db.ref(dbPath(path)).push(data);
 }
 async function syncUp(){}  
-function applyLocal(path,data){const p=path.split('/');if(p[0]==='\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073')S.patients[p[1]]=data;else if(p[0]==='\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067')S.attending[p[1]]=data;}
-function removeLocal(path){const p=path.split('/');if(p[0]==='\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073')delete S.patients[p[1]];else if(p[0]==='\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067')delete S.attending[p[1]];}
+function applyLocal(path,data){const p=path.split('/');if(p[0]==='patients')S.patients[p[1]]=data;else if(p[0]==='attending')S.attending[p[1]]=data;}
+function removeLocal(path){const p=path.split('/');if(p[0]==='patients')delete S.patients[p[1]];else if(p[0]==='attending')delete S.attending[p[1]];}
 
 let showAllQueues = false;
 
@@ -923,7 +910,7 @@ function showTab(tab){
   if(bs) bs.className='tab-btn'+(tab==='stats'?' on':'');
   if(tab==='filas'){ renderAdd(); renderAlerts(); renderQueues(); renderAttending(); }
   if(tab==='stats') renderStats();
-  if(tab==='proced') _0x8571a07a();
+  if(tab==='proced') renderProcedTab();
 }
 
 function toggleFilas(){
@@ -942,7 +929,7 @@ function toggleFilas(){
 
 function seleccionarSucursal(id){
   S.sucursal=id;
-  localStorage.setItem('\u0063\u0070\u0061\u005f\u0073\u0075\u0063\u0075\u0072\u0073\u0061\u006c',id);
+  localStorage.setItem('cpa_sucursal',id);
   showScreen('screen-login');
   setTimeout(precargarNombre,50);
 }
@@ -967,13 +954,13 @@ function renderSucursales(){
   }).join('');
 }
 
-function getRecentNames(){return JSON.parse(localStorage.getItem('\u0063\u0070\u0061\u005f\u0072\u0065\u0063\u0065\u006e\u0074\u005f\u006e\u0061\u006d\u0065\u0073')||'[]');}
+function getRecentNames(){return JSON.parse(localStorage.getItem('cpa_recent_names')||'[]');}
 function saveRecentName(name){
   if(!name.trim())return;
   let names=getRecentNames().filter(n=>n.toLowerCase()!==name.toLowerCase());
   names.unshift(name.trim());
   names=names.slice(0,3);
-  localStorage.setItem('\u0063\u0070\u0061\u005f\u0072\u0065\u0063\u0065\u006e\u0074\u005f\u006e\u0061\u006d\u0065\u0073',JSON.stringify(names));
+  localStorage.setItem('cpa_recent_names',JSON.stringify(names));
 }
 
 function showRecentNames(){
@@ -1042,7 +1029,7 @@ function login(id,name,role){
   if(S.demo){$('live-pill').className='live-pill demo';$('live-txt').textContent='DEMO';}
   showAllQueues = false;
   showScreen('screen-main');showTab('filas');
-  _0x330f09a7();startTick();renderAll();
+  startSync();startTick();renderAll();
 }
 
 function logout(){
@@ -1254,7 +1241,7 @@ async function sendPatient(pid,p,destId,note){
   }
   renderSync();
   
-  await dbPush('\u0063\u006f\u006d\u0070\u006c\u0065\u0074\u0065\u0064',rec);
+  await dbPush('completed',rec);
   await dbRemove('attending/'+pid);
   if(destId!=='alta'){
     await dbSet('patients/'+pid,{id:pid,name:p.name,rut:p.rut||'',tipo:p.tipo||'',
@@ -1262,7 +1249,7 @@ async function sendPatient(pid,p,destId,note){
     toast('Derivado a '+qInfo(destId).name+' ✓');
   } else {
     toast('🎉 Alta registrada con éxito');
-    _0xa5e8fe8b();
+    launchConfetti();
   }
 }
 
@@ -1443,8 +1430,8 @@ function renderAttending(){
 function startMonitor(){
   stopSync();
   if(!S.demo&&S.db){
-    const pRef=S.db.ref(_0x19972dc5('\u0070\u0061\u0074\u0069\u0065\u006e\u0074\u0073'));
-    const aRef=S.db.ref(_0x19972dc5('\u0061\u0074\u0074\u0065\u006e\u0064\u0069\u006e\u0067'));
+    const pRef=S.db.ref(dbPath('patients'));
+    const aRef=S.db.ref(dbPath('attending'));
     const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderMonitor();});
     const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderMonitor();});
     S.listeners=[{ref:pRef,ev:'value',fn:onP},{ref:aRef,ev:'value',fn:onA}];
@@ -1607,7 +1594,7 @@ function renderStats(){
   const deleteBar = isAdmin && rows.length ? `
     <div id="delete-bar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:var(--radius);margin-bottom:10px;display:none">
       <span id="delete-count" style="font-size:13px;font-weight:700;color:#991B1B">0 registros seleccionados</span>
-      <button onclick="_0x263eccd7()"
+      <button onclick="confirmarBorrado()"
         style="padding:7px 16px;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);transition:opacity .2s"
         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
         🗑 Borrar seleccionados
@@ -1682,7 +1669,7 @@ function exportExcel(){
   QUEUES.forEach(q=>h2.push([q.name,byQ[q.id].w.length,avg(byQ[q.id].w),avg(byQ[q.id].a)]));
   h2.push(['','','','']);h2.push(['Total pacientes',new Set(all.map(r=>r.id)).size,'','']);h2.push(['Altas',all.filter(r=>r.doneAt).length,'','']);
   wb.add('Resumen',h2,[26,16,22,22]);
-  wb.download('CentroMedico_'+new Date().toLocaleDateString('es-CL').replace(/\
+  wb.download('CentroMedico_'+new Date().toLocaleDateString('es-CL').replace(/\//g,'-')+'.xlsx');
   toast('Descargando Excel...');
 }
 
@@ -1710,7 +1697,7 @@ async function checkRutExistente(rut){
   const hint=$('rut-hint');
   if(!hint)return;
   try{
-    const snap=await S.db.ref('\u0061\u0063\u0065\u0070\u0074\u0061\u0063\u0069\u006f\u006e\u0065\u0073\u005f\u0074\u0065\u0072\u006d\u0069\u006e\u006f\u0073').orderByChild('rut').equalTo(rut).limitToFirst(1).get();
+    const snap=await S.db.ref('aceptaciones_terminos').orderByChild('rut').equalTo(rut).limitToFirst(1).get();
     if(snap.exists()){
       const datos=Object.values(snap.val())[0];
       hint.style.display='block';
@@ -1727,7 +1714,7 @@ async function checkRutExistente(rut){
 }
 
 function saltarTerminos(nombre){
-  localStorage.setItem('\u0063\u0070\u0061\u005f\u0074\u0065\u0072\u006d\u0073\u005f\u0061\u0063\u0063\u0065\u0070\u0074\u0065\u0064','1');
+  localStorage.setItem('cpa_terms_accepted','1');
   localStorage.setItem('cpa_terms_user',nombre);
   showScreen('screen-sucursal');
   toast('Bienvenido/a de nuevo, '+nombre.split(' ')[0]+' ✓');
@@ -1765,9 +1752,9 @@ async function aceptarTerminos(){
     userAgent:navigator.userAgent.slice(0,120),
   };
   try{
-    if(S.db) await S.db.ref('\u0061\u0063\u0065\u0070\u0074\u0061\u0063\u0069\u006f\u006e\u0065\u0073\u005f\u0074\u0065\u0072\u006d\u0069\u006e\u006f\u0073').push(registro);
+    if(S.db) await S.db.ref('aceptaciones_terminos').push(registro);
   }catch(e){console.warn('No se pudo guardar aceptación:',e);}
-  localStorage.setItem('\u0063\u0070\u0061\u005f\u0074\u0065\u0072\u006d\u0073\u005f\u0061\u0063\u0063\u0065\u0070\u0074\u0065\u0064','1');
+  localStorage.setItem('cpa_terms_accepted','1');
   localStorage.setItem('cpa_terms_user',nombre);
   showScreen('screen-sucursal');
   toast('Términos aceptados ✓ Bienvenido/a, '+nombre.split(' ')[0]);
@@ -1779,7 +1766,7 @@ function abrirProcedDesdeAtt(pid){
   
   setTimeout(()=>{
     const sel=$('proced-pid');
-    if(sel){sel.value=pid;_0xf3f3049c();}
+    if(sel){sel.value=pid;renderProcedForm();}
   },100);
 }
 
@@ -1839,7 +1826,7 @@ const PROCED_MATERIALES = {
   ],
 };
 
-function _0x8571a07a(){
+function renderProcedTab(){
   const c=$('proced-content');if(!c)return;
   const ptsEnAtencion=Object.values(S.attending)
     .filter(p=>p.queue==='procedimientos'&&(S.user.role==='admin'||p.attRole===S.user.role));
@@ -1854,7 +1841,7 @@ function _0x8571a07a(){
     <div class="proced-header">Seleccionar paciente en atención</div>
     ${ptsEnAtencion.length===0
       ? `<div class="q-empty" style="background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:16px">No tienes pacientes en procedimientos ahora</div>`
-      : `<select class="proced-patient-sel" id="proced-pid" onchange="_0xf3f3049c()">
+      : `<select class="proced-patient-sel" id="proced-pid" onchange="renderProcedForm()">
           <option value="">— Selecciona el paciente —</option>
           ${ptsEnAtencion.map(p=>`<option value="${p.id}">${p.name}${p.rut?' · '+p.rut:''}</option>`).join('')}
          </select>`
@@ -1882,15 +1869,15 @@ function _0x8571a07a(){
         </div>`).join('')}
       </div>`:''}
   `;
-  if(procTipoActivo) _0xf3f3049c();
+  if(procTipoActivo) renderProcedForm();
 }
 
 function selectProcTipo(id){
   procTipoActivo=id;
-  _0x8571a07a();
+  renderProcedTab();
 }
 
-function _0xf3f3049c(){
+function renderProcedForm(){
   const z=$('proced-form-zone');if(!z||!procTipoActivo)return;
   const tipo=PROCED_TIPOS.find(t=>t.id===procTipoActivo);
   const mats=PROCED_MATERIALES[procTipoActivo]||[];
@@ -1956,7 +1943,7 @@ function _0xf3f3049c(){
     ${matHtml}
     <div class="mat-title" style="margin-top:8px">Observaciones</div>
     <textarea class="proced-obs" id="proced-obs" placeholder="Observaciones adicionales del procedimiento..."></textarea>
-    <button class="proced-save-btn" onclick="_0x7399d6fc()">💾 Guardar registro de procedimiento</button>
+    <button class="proced-save-btn" onclick="guardarProced()">💾 Guardar registro de procedimiento</button>
   </div>`;
 }
 
@@ -1975,7 +1962,7 @@ function onFijChange(val){
   sub.style.display=val==='Adhesivo transparente'?'inline-block':'none';
 }
 
-function _0x677b6b92(){
+function buildMatString(){
   const mats=PROCED_MATERIALES[procTipoActivo]||[];
   const lines=[];
   mats.forEach(m=>{
@@ -2017,13 +2004,13 @@ function _0x677b6b92(){
   return lines.join(' | ');
 }
 
-async function _0x7399d6fc(){
+async function guardarProced(){
   const pidEl=$('proced-pid');
   const pid=pidEl?pidEl.value:'';
   if(!pid){toast('Selecciona el paciente primero');return;}
   const p=S.attending[pid];if(!p)return;
   const tipo=PROCED_TIPOS.find(t=>t.id===procTipoActivo);
-  const matStr=_0x677b6b92();
+  const matStr=buildMatString();
   if(!matStr){toast('Selecciona al menos un material');return;}
 
   const rec={
@@ -2037,10 +2024,10 @@ async function _0x7399d6fc(){
   };
   if(!S.completed)S.completed=[];
   S.completed.push(rec);
-  await dbPush('\u0063\u006f\u006d\u0070\u006c\u0065\u0074\u0065\u0064',rec);
+  await dbPush('completed',rec);
   toast('✓ Procedimiento registrado — '+tipo.label);
   procTipoActivo=null;
-  _0x8571a07a();
+  renderProcedTab();
 }
 
 let galloClicks=0,galloTimer=null;
@@ -2052,7 +2039,7 @@ function clickLogo(){
     galloClicks=0;
     $('gallo-overlay').classList.add('show');
     
-    _0xa5e8fe8b();
+    launchConfetti();
   }
 }
 function cerrarGallo(){$('gallo-overlay').classList.remove('show');}
@@ -2079,17 +2066,17 @@ function onRowChk(){
   if(chkAll) chkAll.checked=selected===total&&total>0;
 }
 
-function _0x263eccd7(){
+function confirmarBorrado(){
   const selected=document.querySelectorAll('.row-chk:checked').length;
   if(!selected)return;
   
   if(!confirm(`⚠️ ¿Estás seguro de que deseas borrar ${selected} registro${selected!==1?'s':''}?\n\nEsta acción no se puede deshacer.`)) return;
   
   if(!confirm(`🔴 CONFIRMACIÓN FINAL\n\nSe borrarán ${selected} registro${selected!==1?'s':''} permanentemente de la base de datos.\n\n¿Confirmas el borrado?`)) return;
-  _0x5991b3e7();
+  ejecutarBorrado();
 }
 
-async function _0x5991b3e7(){
+async function ejecutarBorrado(){
   const rows=window._statsRows||[];
   const chks=document.querySelectorAll('.row-chk');
   const aEliminar=[];
@@ -2103,7 +2090,7 @@ async function _0x5991b3e7(){
   for(const r of aEliminar){
     if(r._fbKey && S.db){
       try{
-        await S.db.ref(_0x19972dc5('completed/'+r._fbKey)).remove();
+        await S.db.ref(dbPath('completed/'+r._fbKey)).remove();
         borrados++;
       }catch(e){console.warn('Error borrando:',e);}
     } else if(S.demo){
@@ -2117,7 +2104,7 @@ async function _0x5991b3e7(){
   renderStats();
 }
 
-function _0xa5e8fe8b(){
+function launchConfetti(){
   const canvas=$('confetti-canvas');
   if(!canvas)return;
   canvas.style.display='block';
@@ -2183,27 +2170,32 @@ function showScreen(id){
 
 document.addEventListener('DOMContentLoaded',async()=>{
   showPollito();
+
+  function goNext(){
+    hidePollito();
+    if(!localStorage.getItem('cpa_terms_accepted')){
+      showScreen('screen-terms');
+    } else {
+      const savedSuc=localStorage.getItem('cpa_sucursal');
+      if(savedSuc) S.sucursal=savedSuc;
+      showScreen('screen-sucursal');
+    }
+  }
+
+  
+  const fallback = setTimeout(()=>{
+    console.warn('Firebase timeout — continuando sin conexión');
+    goNext();
+  }, 5000);
+
   try{
     await initFirebase(FB_CFG);
-    hidePollito();
-    if(!localStorage.getItem('\u0063\u0070\u0061\u005f\u0074\u0065\u0072\u006d\u0073\u005f\u0061\u0063\u0063\u0065\u0070\u0074\u0065\u0064')){
-      showScreen('screen-terms');
-    } else {
-      const savedSuc=localStorage.getItem('\u0063\u0070\u0061\u005f\u0073\u0075\u0063\u0075\u0072\u0073\u0061\u006c');
-      if(savedSuc) S.sucursal=savedSuc;
-      showScreen('screen-sucursal');
-    }
+    clearTimeout(fallback);
+    goNext();
   }catch(e){
-    hidePollito();
+    clearTimeout(fallback);
     console.error('Firebase error:',e);
-    
-    if(!localStorage.getItem('\u0063\u0070\u0061\u005f\u0074\u0065\u0072\u006d\u0073\u005f\u0061\u0063\u0063\u0065\u0070\u0074\u0065\u0064')){
-      showScreen('screen-terms');
-    } else {
-      const savedSuc=localStorage.getItem('\u0063\u0070\u0061\u005f\u0073\u0075\u0063\u0075\u0072\u0073\u0061\u006c');
-      if(savedSuc) S.sucursal=savedSuc;
-      showScreen('screen-sucursal');
-    }
+    goNext();
   }
 });
 </script>
