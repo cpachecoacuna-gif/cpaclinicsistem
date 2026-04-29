@@ -1348,6 +1348,11 @@ function renderAttending(){
       ${progressBar}
       ${p.note?`<div class="p-note-display">📋 ${p.note}</div>`:''}
       ${showAchs?`<button class="achs-btn" onclick="window.open('https://prod.salud.achs.cl/web-admision/','_blank')">🔗 Abrir sistema ACHS Admisión</button>`:''}
+      ${p.queue==='procedimientos'?`<button onclick="abrirProcedDesdeAtt('${p.id}')"
+        style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:9px;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);margin-bottom:8px;transition:all .2s;color:#1E40AF"
+        onmouseover="this.style.background='#DBEAFE'" onmouseout="this.style.background='#EFF6FF'">
+        📋 Registrar procedimiento y materiales
+      </button>`:''}
       <div style="display:flex;gap:8px;margin-top:4px">
         <button onclick="devolverAFila('${p.id}')"
           style="flex:1;padding:9px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:9px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font);color:#DC2626;transition:all .2s"
@@ -1594,6 +1599,16 @@ async function aceptarTerminos(){
   toast('Términos aceptados ✓ Bienvenido/a, '+nombre.split(' ')[0]);
 }
 
+function abrirProcedDesdeAtt(pid){
+  // Ir directamente a la pestaña de procedimientos con el paciente preseleccionado
+  showTab('proced');
+  // Esperar a que renderice y seleccionar el paciente
+  setTimeout(()=>{
+    const sel=$('proced-pid');
+    if(sel){sel.value=pid;renderProcedForm();}
+  },100);
+}
+
 // ── MÓDULO PROCEDIMIENTOS ────────────────────────────────────────────────────
 let procTipoActivo = null;
 
@@ -1631,11 +1646,17 @@ const PROCED_MATERIALES = {
     { id:'aguja', label:'Aguja', type:'selectQty', opts:['21G','18G'] },
   ],
   inm: [
-    { id:'ferula',label:'Férula', type:'check' },
-    { id:'venda', label:'Venda elástica', type:'check' },
-    { id:'algod', label:'Algodón ortopédico', type:'check' },
-    { id:'yeso',  label:'Yeso', type:'check' },
-    { id:'cabestrillo', label:'Cabestrillo', type:'check' },
+    { id:'collar',  label:'Collar cervical', type:'check' },
+    { id:'hombro',  label:'Inmovilizador de hombro', type:'check' },
+    { id:'cabestr', label:'Cabestrillo', type:'check' },
+    { id:'muneca',  label:'Inmovilizador de muñeca', type:'check' },
+    { id:'pierna',  label:'Inmovilizador de pierna', type:'check' },
+    { id:'bota',    label:'Bota', type:'check' },
+    { id:'tobillo', label:'Inmovilizador de tobillo', type:'check' },
+    { id:'ferula',  label:'Férula', type:'check' },
+    { id:'venda',   label:'Venda elástica', type:'check' },
+    { id:'algod',   label:'Algodón ortopédico', type:'check' },
+    { id:'yeso',    label:'Yeso', type:'check' },
   ],
   ret: [
     { id:'kit_ret', label:'Kit retiro puntos', type:'check' },
