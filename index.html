@@ -1066,7 +1066,7 @@ function openModalDerivar(pid){
   onModalDestChange(''); // reset submenu
   const canSelf=['procedimientos','botiquin'];
   const opciones=QUEUES
-    .filter(q=>q.id!=='egreso'&&(q.id!==p.queue||canSelf.includes(p.queue)))
+    .filter(q=>q.id!==p.queue||canSelf.includes(p.queue))
     .map(q=>`<option value="${q.id}">${q.name}${q.id===p.queue?' (nueva atención)':''}</option>`)
     .join('');
   $('modal-dest').innerHTML=opciones;
