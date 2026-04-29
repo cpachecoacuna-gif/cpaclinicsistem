@@ -378,7 +378,7 @@ input,select,textarea{transition:var(--transition)}
 
 /* ── STATS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
-@media(min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:600px){.stats-grid{grid-template-columns:repeat(3,1fr)}}
 .stat-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:13px}
 .stat-lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
 .stat-val{font-size:28px;font-weight:800;font-family:var(--mono)}
@@ -512,6 +512,19 @@ input,select,textarea{transition:var(--transition)}
   </div></div>
 </div>
 
+<!-- ── SELECCIÓN SUCURSAL ── -->
+<div class="screen" id="screen-sucursal">
+  <div class="login-wrap"><div class="login-card">
+    <div class="brand"><div class="brand-icon" onclick="clickLogo()" style="cursor:pointer">🏥</div><div><h2>CPAclinicsistem</h2><p>Selecciona tu sucursal</p></div></div>
+    <div class="sec-lbl">¿En qué sucursal estás?</div>
+    ${SUCURSALES.map(s=>`
+      <button class="user-btn" onclick="seleccionarSucursal('${s.id}')">
+        <div class="u-av" style="background:#EFF6FF;color:#1E40AF">🏢</div>
+        <div><div class="u-name">${s.name}</div><div class="u-desc">Sucursal ${s.name}</div></div>
+      </button>`).join('')}
+  </div></div>
+</div>
+
 <!-- ── LOGIN ── -->
 <div class="screen" id="screen-login">
   <div class="login-wrap"><div class="login-card">
@@ -540,7 +553,8 @@ input,select,textarea{transition:var(--transition)}
     <button class="user-btn" onclick="loginConNombre('tens','tens')"><div class="u-av" style="background:#EFF6FF;color:#1D4ED8">TN</div><div><div class="u-name">TENS</div><div class="u-desc">Botiquín / Entrega medicamentos</div></div></button>
     <div class="sec-lbl">Sala de espera</div>
     <button class="monitor-btn" onclick="login('monitor','Monitor','monitor')">🖥 Pantalla sala de espera</button>
-    <button class="reset-link" onclick="resetConfig()">Cambiar configuración</button>
+    <button class="reset-link" onclick="showScreen('screen-sucursal')">← Cambiar sucursal</button>
+    <button class="reset-link" onclick="resetConfig()">Cambiar configuración Firebase</button>
   </div></div>
 </div>
 
@@ -755,7 +769,7 @@ function level(ms,limit){if(!limit)return'ok';const p=ms/limit;return p>=1?'over
 function tipoLabel(v){const t=TIPOS.find(x=>x.val===v);return t?t.label:v;}
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let S={user:null,demo:false,key:null,binId:null,
+let S={user:null,demo:false,key:null,binId:null,sucursal:'laja',
   patients:{},attending:{},completed:[],
   syncInt:null,tickInt:null,monInt:null,
   modalPid:null,egresoMid:null,egresoNote:'',syncing:false};
@@ -771,6 +785,17 @@ function canManage(qid){return qInfo(qid).roles.includes(S.user?.role);}
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
 function formatRut(r){r=r.replace(/[^0-9kK]/g,'').toUpperCase();if(r.length<2)return r;const dv=r.slice(-1),num=r.slice(0,-1);return num+'-'+dv;}
 function onRut(el){el.value=formatRut(el.value);}
+
+// ── SUCURSALES ────────────────────────────────────────────────────────────────
+const SUCURSALES=[
+  {id:'laja',       name:'Laja'},
+  {id:'nacimiento', name:'Nacimiento'},
+  {id:'cabrero',    name:'Cabrero'},
+];
+
+function dbPath(path){
+  return `sucursales/${S.sucursal||'laja'}/${path}`;
+}
 
 // ── FIREBASE CREDENTIALS (incrustadas — no requiere configuración) ─────────────
 const FB_CFG = {
@@ -843,12 +868,18 @@ function usarDemo(){
 function startSync(){
   if(S.demo||!S.db){renderAll();return;}
   stopSync();
-  const pRef=S.db.ref('patients');
-  const aRef=S.db.ref('attending');
-  const cRef=S.db.ref('completed');
+  const pRef=S.db.ref(dbPath('patients'));
+  const aRef=S.db.ref(dbPath('attending'));
+  const cRef=S.db.ref(dbPath('completed'));
   const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderSync();});
   const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderSync();});
-  const onC=cRef.on('value',snap=>{S.completed=snap.val()?Object.values(snap.val()):[];});
+  const onC=cRef.on('value',snap=>{
+    if(snap.val()){
+      S.completed=Object.entries(snap.val()).map(([k,v])=>({...v,_fbKey:k}));
+    } else {
+      S.completed=[];
+    }
+  });
   S.listeners=[{ref:pRef,ev:'value',fn:onP},{ref:aRef,ev:'value',fn:onA},{ref:cRef,ev:'value',fn:onC}];
 }
 function stopSync(){
@@ -859,15 +890,15 @@ function stopSync(){
 // DB helpers
 async function dbSet(path,data){
   if(S.demo){applyLocal(path,data);renderSync();return;}
-  await S.db.ref(path).set(data);
+  await S.db.ref(dbPath(path)).set(data);
 }
 async function dbRemove(path){
   if(S.demo){removeLocal(path);renderSync();return;}
-  await S.db.ref(path).remove();
+  await S.db.ref(dbPath(path)).remove();
 }
 async function dbPush(path,data){
   if(S.demo){if(!S.completed)S.completed=[];S.completed.push(data);return;}
-  await S.db.ref(path).push(data);
+  await S.db.ref(dbPath(path)).push(data);
 }
 async function syncUp(){}  // no-op: Firebase listeners handle everything
 function applyLocal(path,data){const p=path.split('/');if(p[0]==='patients')S.patients[p[1]]=data;else if(p[0]==='attending')S.attending[p[1]]=data;}
@@ -901,6 +932,13 @@ function toggleFilas(){
   const btn=$('btn-filas');
   if(btn) btn.textContent = showAllQueues ? '🏥 Mis filas' : '🏥 Filas';
   renderQueues();
+}
+
+function seleccionarSucursal(id){
+  S.sucursal=id;
+  localStorage.setItem('cpa_sucursal',id);
+  showScreen('screen-login');
+  setTimeout(precargarNombre,50);
 }
 
 // ── NOMBRES RECIENTES ─────────────────────────────────────────────────────────
@@ -975,7 +1013,9 @@ function login(id,name,role){
   if(role==='monitor'){showScreen('screen-monitor');startMonitor();return;}
   const [bg,fg]=AVCOL[role]||['#F3F4F6','#374151'];
   const av=$('tb-av');av.textContent=initials(name);av.style.background=bg;av.style.color=fg;
-  $('tb-name').textContent=name;$('tb-role').textContent=ROLES[role]||role;
+  $('tb-name').textContent=name;
+  const sucNombre=SUCURSALES.find(s=>s.id===S.sucursal)?.name||'';
+  $('tb-role').textContent=(ROLES[role]||role)+(sucNombre?' — '+sucNombre:'');
   if(S.demo){$('live-pill').className='live-pill demo';$('live-txt').textContent='DEMO';}
   showAllQueues = false;
   showScreen('screen-main');showTab('filas');
@@ -986,8 +1026,8 @@ function logout(){
   stopSync();stopTick();clearInterval(S.monInt);
   S.user=null;
   if(!S.demo){S.patients={};S.attending={};S.completed=[];}
-  showScreen('screen-login');
-  setTimeout(precargarNombre,50);
+  // Volver a selección de sucursal
+  showScreen('screen-sucursal');
 }
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
@@ -1384,8 +1424,8 @@ function renderAttending(){
 function startMonitor(){
   stopSync();
   if(!S.demo&&S.db){
-    const pRef=S.db.ref('patients');
-    const aRef=S.db.ref('attending');
+    const pRef=S.db.ref(dbPath('patients'));
+    const aRef=S.db.ref(dbPath('attending'));
     const onP=pRef.on('value',snap=>{S.patients=snap.val()||{};renderMonitor();});
     const onA=aRef.on('value',snap=>{S.attending=snap.val()||{};renderMonitor();});
     S.listeners=[{ref:pRef,ev:'value',fn:onP},{ref:aRef,ev:'value',fn:onA}];
@@ -1429,38 +1469,156 @@ function renderMonitor(){
 // ── STATS ─────────────────────────────────────────────────────────────────────
 function renderStats(){
   const all=S.completed||[];
-  const ids=new Set(all.map(r=>r.id));
-  const done=all.filter(r=>r.doneAt);
-  const avgW=all.length?Math.round(all.reduce((s,r)=>s+(r.waitMs||0),0)/all.length/60000):0;
-  const avgA=all.length?Math.round(all.reduce((s,r)=>s+(r.attMs||0),0)/all.length/60000):0;
+
+  // ── Helpers de fecha ──────────────────────────────────────────────────────
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1);
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+  const esHoy  = r => r.ts && new Date(r.ts) >= hoy;
+  const esAyer = r => r.ts && new Date(r.ts) >= ayer && new Date(r.ts) < hoy;
+  const esMes  = r => r.ts && new Date(r.ts) >= inicioMes;
+
+  const filtros = {
+    hoy:   all.filter(esHoy),
+    ayer:  all.filter(esAyer),
+    mes:   all.filter(esMes),
+  };
+
+  // ── Función de métricas para un conjunto ─────────────────────────────────
+  function metricas(datos){
+    const ids = new Set(datos.map(r=>r.id));
+    const altas = datos.filter(r=>r.doneAt);
+    const avg = (arr, key) => arr.length ? Math.round(arr.reduce((s,r)=>s+(r[key]||0),0)/arr.length/60000) : 0;
+    // Tiempos por etapa
+    const admision     = datos.filter(r=>r.queue==='admision');
+    const atencion     = datos.filter(r=>r.queue==='atencion');
+    const proced       = datos.filter(r=>r.queue==='procedimientos');
+    const botiquin     = datos.filter(r=>r.queue==='botiquin');
+    const egreso       = datos.filter(r=>r.queue==='egreso');
+    return {
+      pacientes: ids.size,
+      altas: altas.length,
+      esperaProm:    avg(datos,'waitMs'),
+      admisionProm:  avg(admision,'attMs'),
+      atencionProm:  avg(atencion,'attMs'),
+      procedProm:    avg(proced,'attMs'),
+      botiquinProm:  avg(botiquin,'attMs'),
+      egresoWait:    avg(egreso,'waitMs'),
+    };
+  }
+
+  const m = {
+    hoy:  metricas(filtros.hoy),
+    ayer: metricas(filtros.ayer),
+    mes:  metricas(filtros.mes),
+  };
+
+  // ── Período seleccionado (para tabla y gráficos) ──────────────────────────
+  const periodoActivo = window._statsPeriodo || 'hoy';
+  const datosActivos = filtros[periodoActivo];
+
+  // ── Render ────────────────────────────────────────────────────────────────
   $('stats-sum').innerHTML=`
-    <div class="stat-card"><div class="stat-lbl">Pacientes hoy</div><div class="stat-val">${ids.size}</div></div>
-    <div class="stat-card"><div class="stat-lbl">Altas</div><div class="stat-val">${done.length}</div></div>
-    <div class="stat-card"><div class="stat-lbl">Espera prom.</div><div class="stat-val">${avgW}m</div></div>
-    <div class="stat-card"><div class="stat-lbl">Atención prom.</div><div class="stat-val">${avgA}m</div></div>
+    <!-- Selector de período -->
+    <div style="grid-column:1/-1;display:flex;gap:8px;margin-bottom:4px">
+      ${['hoy','ayer','mes'].map(p=>`
+        <button onclick="window._statsPeriodo='${p}';renderStats()"
+          style="padding:6px 16px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:var(--font);transition:all .2s;
+            background:${periodoActivo===p?'var(--accent)':'var(--bg)'};
+            color:${periodoActivo===p?'#fff':'var(--muted)'};
+            border:1.5px solid ${periodoActivo===p?'var(--accent)':'var(--border)'}"
+        >${p==='hoy'?'Hoy':p==='ayer'?'Ayer':'Este mes'}</button>`).join('')}
+    </div>
+
+    <!-- KPIs principales -->
+    <div class="stat-card">
+      <div class="stat-lbl">Pacientes</div>
+      <div class="stat-val">${m[periodoActivo].pacientes}</div>
+      ${periodoActivo==='hoy'?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Ayer: ${m.ayer.pacientes} · Mes: ${m.mes.pacientes}</div>`:''}
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Altas completadas</div>
+      <div class="stat-val">${m[periodoActivo].altas}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Espera promedio</div>
+      <div class="stat-val">${m[periodoActivo].esperaProm}m</div>
+    </div>
+
+    <!-- Tiempos promedio por etapa -->
+    <div style="grid-column:1/-1;background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)">
+      <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">
+        Tiempo promedio de atención por etapa
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+        ${[
+          {label:'Admisión',       val:m[periodoActivo].admisionProm, color:'#D97706', bg:'#FFFBEB'},
+          {label:'Atención médica',val:m[periodoActivo].atencionProm, color:'#6B7280', bg:'#F9FAFB'},
+          {label:'Procedimientos', val:m[periodoActivo].procedProm,   color:'#2563EB', bg:'#EFF6FF'},
+          {label:'Botiquín',       val:m[periodoActivo].botiquinProm, color:'#059669', bg:'#ECFDF5'},
+          {label:'Espera egreso',  val:m[periodoActivo].egresoWait,   color:'#7C3AED', bg:'#F5F3FF'},
+        ].map(e=>`
+          <div style="background:${e.bg};border-radius:9px;padding:10px 12px">
+            <div style="font-size:10px;font-weight:800;color:${e.color};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${e.label}</div>
+            <div style="font-size:22px;font-weight:800;color:${e.color};font-family:var(--mono)">${e.val}<span style="font-size:12px;font-weight:600">min</span></div>
+          </div>`).join('')}
+      </div>
+    </div>
   `;
+
+  // ── Gráficos barras por etapa ─────────────────────────────────────────────
   const byQ={};QUEUES.forEach(q=>{byQ[q.id]={w:[],a:[]};});
-  all.forEach(r=>{if(byQ[r.queue]){if(r.waitMs)byQ[r.queue].w.push(r.waitMs/60000);if(r.attMs)byQ[r.queue].a.push(r.attMs/60000);}});
+  datosActivos.forEach(r=>{
+    if(byQ[r.queue]){
+      if(r.waitMs)byQ[r.queue].w.push(r.waitMs/60000);
+      if(r.attMs) byQ[r.queue].a.push(r.attMs/60000);
+    }
+  });
   const avg=arr=>arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):0;
   const maxW=Math.max(1,...QUEUES.map(q=>avg(byQ[q.id].w)));
   const maxA=Math.max(1,...QUEUES.map(q=>avg(byQ[q.id].a)));
   const bar=(q,v,max)=>{const w=Math.round(v/max*100);return`<div class="b-row"><div class="b-lbl">${q.name}</div><div class="b-wrap"><div class="b-fill" style="width:${w}%;background:${q.color}">${w>18?v+'m':''}</div></div><div class="b-val">${v}m</div></div>`;};
   $('chart-w').innerHTML=QUEUES.map(q=>bar(q,avg(byQ[q.id].w),maxW)).join('');
   $('chart-a').innerHTML=QUEUES.map(q=>bar(q,avg(byQ[q.id].a),maxA)).join('');
-  const rows=all.filter((r,i,a)=>a.findIndex(x=>x.id===r.id&&x.queue===r.queue)===i).sort((a,b)=>b.ts-a.ts);
-  $('hist-wrap').innerHTML=`<table>
-    <thead><tr><th>Paciente</th><th>RUT</th><th>Tipo</th><th>Etapa</th><th>Nota</th><th>Espera</th><th>Atención</th><th>Estado</th></tr></thead>
-    <tbody>${!rows.length?'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Sin registros aún.</td></tr>'
-      :rows.map(r=>{const q=qInfo(r.queue);return`<tr>
+
+  // ── Tabla historial con selección para borrar ────────────────────────────
+  const isAdmin = S.user?.role === 'admin';
+  const rows=datosActivos.filter((r,i,a)=>a.findIndex(x=>x.id===r.id&&x.queue===r.queue)===i).sort((a,b)=>b.ts-a.ts);
+
+  const deleteBar = isAdmin && rows.length ? `
+    <div id="delete-bar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:var(--radius);margin-bottom:10px;display:none">
+      <span id="delete-count" style="font-size:13px;font-weight:700;color:#991B1B">0 registros seleccionados</span>
+      <button onclick="confirmarBorrado()"
+        style="padding:7px 16px;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);transition:opacity .2s"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🗑 Borrar seleccionados
+      </button>
+    </div>` : '';
+
+  $('hist-wrap').innerHTML=`
+    ${deleteBar}
+    <table>
+    <thead><tr>
+      ${isAdmin?`<th style="width:36px"><input type="checkbox" id="chk-all" onchange="toggleAllRows(this.checked)" style="width:15px;height:15px;accent-color:#DC2626;cursor:pointer"/></th>`:''}
+      <th>Paciente</th><th>RUT</th><th>Tipo</th><th>Etapa</th><th>Nota</th><th>Espera</th><th>Atención</th><th>Estado</th>
+    </tr></thead>
+    <tbody>${!rows.length
+      ?`<tr><td colspan="${isAdmin?9:8}" style="text-align:center;padding:20px;color:var(--muted)">Sin registros en este período.</td></tr>`
+      :rows.map((r,i)=>{const q=qInfo(r.queue);const fbKey=r._fbKey||'';return`<tr id="row-${i}" data-fbkey="${fbKey}" data-idx="${i}">
+        ${isAdmin?`<td><input type="checkbox" class="row-chk" onchange="onRowChk()" style="width:15px;height:15px;accent-color:#DC2626;cursor:pointer"/></td>`:''}
         <td style="font-weight:700">${r.name}</td>
         <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${r.rut||'—'}</td>
         <td><span class="badge" style="background:#F3F4F6;color:#374151">${r.tipo||'—'}</span></td>
         <td><span class="badge" style="background:${q.bg};color:${q.tc}">${q.name}</span></td>
-        <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.note||'—'}</td>
+        <td style="font-size:11px;color:var(--muted);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.note||'—'}</td>
         <td><span class="badge" style="background:#FFFBEB;color:#92400E">${fmtMin(r.waitMs||0)}m</span></td>
         <td><span class="badge" style="background:#ECFDF5;color:#065F46">${fmtMin(r.attMs||0)}m</span></td>
         <td><span class="badge" style="background:${r.doneAt?'#F5F3FF':'#F9FAFB'};color:${r.doneAt?'#5B21B6':'#374151'}">${r.doneAt?'Alta':'En proceso'}</span></td>
       </tr>`;}).join('')}</tbody></table>`;
+
+  // Guardar índices de rows para poder borrarlos
+  window._statsRows = rows;
 }
 
 // ── TICK ──────────────────────────────────────────────────────────────────────
@@ -1556,7 +1714,7 @@ async function checkRutExistente(rut){
 function saltarTerminos(nombre){
   localStorage.setItem('cpa_terms_accepted','1');
   localStorage.setItem('cpa_terms_user',nombre);
-  showScreen('screen-login');
+  showScreen('screen-sucursal');
   toast('Bienvenido/a de nuevo, '+nombre.split(' ')[0]+' ✓');
 }
 function toggleTermsCheck(){
@@ -1596,7 +1754,7 @@ async function aceptarTerminos(){
   }catch(e){console.warn('No se pudo guardar aceptación:',e);}
   localStorage.setItem('cpa_terms_accepted','1');
   localStorage.setItem('cpa_terms_user',nombre);
-  showScreen('screen-login');
+  showScreen('screen-sucursal');
   toast('Términos aceptados ✓ Bienvenido/a, '+nombre.split(' ')[0]);
 }
 
@@ -1890,6 +2048,64 @@ function cerrarGallo(){$('gallo-overlay').classList.remove('show');}
 function showPollito(){const p=$('pollito-loading');if(p)p.classList.add('show');}
 function hidePollito(){const p=$('pollito-loading');if(p)p.classList.remove('show');}
 
+// ── BORRADO SELECTIVO (solo admin) ───────────────────────────────────────────
+function toggleAllRows(checked){
+  document.querySelectorAll('.row-chk').forEach(chk=>chk.checked=checked);
+  onRowChk();
+}
+
+function onRowChk(){
+  const selected=document.querySelectorAll('.row-chk:checked').length;
+  const bar=$('delete-bar');
+  const count=$('delete-count');
+  if(bar){
+    bar.style.display=selected>0?'flex':'none';
+    if(count) count.textContent=`${selected} registro${selected!==1?'s':''} seleccionado${selected!==1?'s':''}`;
+  }
+  // Deseleccionar "todos" si no están todos marcados
+  const total=document.querySelectorAll('.row-chk').length;
+  const chkAll=$('chk-all');
+  if(chkAll) chkAll.checked=selected===total&&total>0;
+}
+
+function confirmarBorrado(){
+  const selected=document.querySelectorAll('.row-chk:checked').length;
+  if(!selected)return;
+  // Primera confirmación
+  if(!confirm(`⚠️ ¿Estás seguro de que deseas borrar ${selected} registro${selected!==1?'s':''}?\n\nEsta acción no se puede deshacer.`)) return;
+  // Segunda confirmación
+  if(!confirm(`🔴 CONFIRMACIÓN FINAL\n\nSe borrarán ${selected} registro${selected!==1?'s':''} permanentemente de la base de datos.\n\n¿Confirmas el borrado?`)) return;
+  ejecutarBorrado();
+}
+
+async function ejecutarBorrado(){
+  const rows=window._statsRows||[];
+  const chks=document.querySelectorAll('.row-chk');
+  const aEliminar=[];
+  chks.forEach((chk,i)=>{
+    if(chk.checked && rows[i]){
+      aEliminar.push(rows[i]);
+    }
+  });
+  if(!aEliminar.length){toast('No hay registros seleccionados');return;}
+  let borrados=0;
+  for(const r of aEliminar){
+    if(r._fbKey && S.db){
+      try{
+        await S.db.ref(dbPath('completed/'+r._fbKey)).remove();
+        borrados++;
+      }catch(e){console.warn('Error borrando:',e);}
+    } else if(S.demo){
+      // modo demo: borrar del array local
+      const idx=S.completed.findIndex(c=>c===r||c._fbKey===r._fbKey);
+      if(idx!==-1) S.completed.splice(idx,1);
+      borrados++;
+    }
+  }
+  toast(`✓ ${borrados} registro${borrados!==1?'s':''} borrado${borrados!==1?'s':''}`);
+  renderStats();
+}
+
 // ── CONFETTI ──────────────────────────────────────────────────────────────────
 function launchConfetti(){
   const canvas=$('confetti-canvas');
@@ -1964,8 +2180,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(!localStorage.getItem('cpa_terms_accepted')){
       showScreen('screen-terms');
     } else {
-      showScreen('screen-login');
-      setTimeout(precargarNombre,50);
+      // Restaurar sucursal si ya fue seleccionada antes
+      const savedSuc=localStorage.getItem('cpa_sucursal');
+      if(savedSuc){S.sucursal=savedSuc;}
+      showScreen('screen-sucursal');
     }
   }catch(e){
     hidePollito();
