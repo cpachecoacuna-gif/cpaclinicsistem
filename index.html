@@ -1795,6 +1795,7 @@ const PROCED_TIPOS = [
   {id:'cur',   icon:'🔬', label:'Curación'},
   {id:'inm',   icon:'🩹', label:'Inmovilización'},
   {id:'ret',   icon:'✂️',  label:'Retiro de puntos'},
+  {id:'sut',   icon:'🪡', label:'Sutura'},
 ];
 
 const PROCED_MATERIALES = {
@@ -1842,6 +1843,16 @@ const PROCED_MATERIALES = {
     { id:'sf_ret',  label:'Suero Fisiológico 20ml', type:'qty', placeholder:'Unidades' },
     { id:'puntos',  label:'Nº puntos retirados', type:'qty', placeholder:'Cantidad' },
   ],
+  sut: [
+    { id:'sut_kit',   label:'Kit de sutura', type:'check' },
+    { id:'sut_hilo',  label:'Hilo de sutura', type:'select', opts:['Nylon 2-0','Nylon 3-0','Nylon 4-0','Nylon 5-0','Vicryl 2-0','Vicryl 3-0','Seda 2-0','Seda 3-0'] },
+    { id:'sut_pts',   label:'Nº puntos aplicados', type:'qty', placeholder:'Cantidad' },
+    { id:'sut_aguja', label:'Aguja', type:'select', opts:['Triangular cortante','Redonda'] },
+    { id:'sut_gasas', label:'Gasas', type:'qty', placeholder:'Cantidad' },
+    { id:'sut_sf',    label:'Suero Fisiológico 20ml', type:'qty', placeholder:'Unidades' },
+    { id:'sut_guante',label:'Guante estéril', type:'select', opts:['6','6.5','7','7.5','8'] },
+    { id:'sut_fij',   label:'Fijación', type:'select', opts:['Micropore','Adhesivo transparente','Fixomull'] },
+  ],
 };
 
 function renderProcedTab(){
@@ -1856,6 +1867,12 @@ function renderProcedTab(){
     .slice(0,10);
 
   c.innerHTML=`
+    <button onclick="showTab('filas')"
+      style="display:flex;align-items:center;gap:7px;padding:8px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);margin-bottom:14px;transition:all .2s;color:var(--muted)"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      ← Volver a En atención
+    </button>
     <div class="proced-header">Seleccionar paciente en atención</div>
     ${ptsEnAtencion.length===0
       ? `<div class="q-empty" style="background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:16px">No tienes pacientes en procedimientos ahora</div>`
